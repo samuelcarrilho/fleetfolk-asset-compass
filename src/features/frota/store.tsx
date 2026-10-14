@@ -1,7 +1,9 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { initialUsers, initialVehicles, type User, type Vehicle } from './data';
 type Store = { users:User[]; vehicles:Vehicle[]; saveUser:(u:User)=>void; saveVehicle:(v:Vehicle)=>void; removeUser:(id:string)=>void; removeVehicle:(id:string)=>void; message:string; notify:(s:string)=>void };
-const Context=createContext<Store|null>(null);
+// Keep one context instance across hot reloads so provider and consumers always match.
+const globalStore=globalThis as typeof globalThis & {__fleetContext?:React.Context<Store|null>};
+const Context=globalStore.__fleetContext ??= createContext<Store|null>(null);
 export function FleetProvider({children}:{children:ReactNode}) {
  const [users,setUsers]=useState(initialUsers); const [vehicles,setVehicles]=useState(initialVehicles); const [message,notify]=useState('');
  useEffect(()=>{if(!message)return;const timer=setTimeout(()=>notify(''),3500);return()=>clearTimeout(timer);},[message]);
