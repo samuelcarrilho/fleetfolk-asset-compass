@@ -10,33 +10,193 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AbastecimentosRouteImport } from './routes/abastecimentos'
+import { Route as AjudaRouteImport } from './routes/ajuda'
+import { Route as ChecklistRouteImport } from './routes/checklist'
+import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
+import { Route as DocumentosRouteImport } from './routes/documentos'
+import { Route as ManutencoesRouteImport } from './routes/manutencoes'
+import { Route as MotoristasRouteImport } from './routes/motoristas'
+import { Route as MultasRouteImport } from './routes/multas'
+import { Route as RelatoriosRouteImport } from './routes/relatorios'
+import { Route as SaidasRetornosRouteImport } from './routes/saidas-retornos'
+import { Route as UsuariosRouteImport } from './routes/usuarios'
+import { Route as VeiculosRouteImport } from './routes/veiculos'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AbastecimentosRoute = AbastecimentosRouteImport.update({
+  id: '/abastecimentos',
+  path: '/abastecimentos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AjudaRoute = AjudaRouteImport.update({
+  id: '/ajuda',
+  path: '/ajuda',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChecklistRoute = ChecklistRouteImport.update({
+  id: '/checklist',
+  path: '/checklist',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocumentosRoute = DocumentosRouteImport.update({
+  id: '/documentos',
+  path: '/documentos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManutencoesRoute = ManutencoesRouteImport.update({
+  id: '/manutencoes',
+  path: '/manutencoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MotoristasRoute = MotoristasRouteImport.update({
+  id: '/motoristas',
+  path: '/motoristas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MultasRoute = MultasRouteImport.update({
+  id: '/multas',
+  path: '/multas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RelatoriosRoute = RelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SaidasRetornosRoute = SaidasRetornosRouteImport.update({
+  id: '/saidas-retornos',
+  path: '/saidas-retornos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsuariosRoute = UsuariosRouteImport.update({
+  id: '/usuarios',
+  path: '/usuarios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VeiculosRoute = VeiculosRouteImport.update({
+  id: '/veiculos',
+  path: '/veiculos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/abastecimentos': typeof AbastecimentosRoute
+  '/ajuda': typeof AjudaRoute
+  '/checklist': typeof ChecklistRoute
+  '/configuracoes': typeof ConfiguracoesRoute
+  '/documentos': typeof DocumentosRoute
+  '/manutencoes': typeof ManutencoesRoute
+  '/motoristas': typeof MotoristasRoute
+  '/multas': typeof MultasRoute
+  '/relatorios': typeof RelatoriosRoute
+  '/saidas-retornos': typeof SaidasRetornosRoute
+  '/usuarios': typeof UsuariosRoute
+  '/veiculos': typeof VeiculosRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/abastecimentos': typeof AbastecimentosRoute
+  '/ajuda': typeof AjudaRoute
+  '/checklist': typeof ChecklistRoute
+  '/configuracoes': typeof ConfiguracoesRoute
+  '/documentos': typeof DocumentosRoute
+  '/manutencoes': typeof ManutencoesRoute
+  '/motoristas': typeof MotoristasRoute
+  '/multas': typeof MultasRoute
+  '/relatorios': typeof RelatoriosRoute
+  '/saidas-retornos': typeof SaidasRetornosRoute
+  '/usuarios': typeof UsuariosRoute
+  '/veiculos': typeof VeiculosRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/abastecimentos': typeof AbastecimentosRoute
+  '/ajuda': typeof AjudaRoute
+  '/checklist': typeof ChecklistRoute
+  '/configuracoes': typeof ConfiguracoesRoute
+  '/documentos': typeof DocumentosRoute
+  '/manutencoes': typeof ManutencoesRoute
+  '/motoristas': typeof MotoristasRoute
+  '/multas': typeof MultasRoute
+  '/relatorios': typeof RelatoriosRoute
+  '/saidas-retornos': typeof SaidasRetornosRoute
+  '/usuarios': typeof UsuariosRoute
+  '/veiculos': typeof VeiculosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/abastecimentos'
+    | '/ajuda'
+    | '/checklist'
+    | '/configuracoes'
+    | '/documentos'
+    | '/manutencoes'
+    | '/motoristas'
+    | '/multas'
+    | '/relatorios'
+    | '/saidas-retornos'
+    | '/usuarios'
+    | '/veiculos'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/abastecimentos'
+    | '/ajuda'
+    | '/checklist'
+    | '/configuracoes'
+    | '/documentos'
+    | '/manutencoes'
+    | '/motoristas'
+    | '/multas'
+    | '/relatorios'
+    | '/saidas-retornos'
+    | '/usuarios'
+    | '/veiculos'
+  id:
+    | '__root__'
+    | '/'
+    | '/abastecimentos'
+    | '/ajuda'
+    | '/checklist'
+    | '/configuracoes'
+    | '/documentos'
+    | '/manutencoes'
+    | '/motoristas'
+    | '/multas'
+    | '/relatorios'
+    | '/saidas-retornos'
+    | '/usuarios'
+    | '/veiculos'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AbastecimentosRoute: typeof AbastecimentosRoute
+  AjudaRoute: typeof AjudaRoute
+  ChecklistRoute: typeof ChecklistRoute
+  ConfiguracoesRoute: typeof ConfiguracoesRoute
+  DocumentosRoute: typeof DocumentosRoute
+  ManutencoesRoute: typeof ManutencoesRoute
+  MotoristasRoute: typeof MotoristasRoute
+  MultasRoute: typeof MultasRoute
+  RelatoriosRoute: typeof RelatoriosRoute
+  SaidasRetornosRoute: typeof SaidasRetornosRoute
+  UsuariosRoute: typeof UsuariosRoute
+  VeiculosRoute: typeof VeiculosRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +208,107 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/abastecimentos': {
+      id: '/abastecimentos'
+      path: '/abastecimentos'
+      fullPath: '/abastecimentos'
+      preLoaderRoute: typeof AbastecimentosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ajuda': {
+      id: '/ajuda'
+      path: '/ajuda'
+      fullPath: '/ajuda'
+      preLoaderRoute: typeof AjudaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checklist': {
+      id: '/checklist'
+      path: '/checklist'
+      fullPath: '/checklist'
+      preLoaderRoute: typeof ChecklistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/configuracoes': {
+      id: '/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof ConfiguracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/documentos': {
+      id: '/documentos'
+      path: '/documentos'
+      fullPath: '/documentos'
+      preLoaderRoute: typeof DocumentosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manutencoes': {
+      id: '/manutencoes'
+      path: '/manutencoes'
+      fullPath: '/manutencoes'
+      preLoaderRoute: typeof ManutencoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/motoristas': {
+      id: '/motoristas'
+      path: '/motoristas'
+      fullPath: '/motoristas'
+      preLoaderRoute: typeof MotoristasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/multas': {
+      id: '/multas'
+      path: '/multas'
+      fullPath: '/multas'
+      preLoaderRoute: typeof MultasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/relatorios': {
+      id: '/relatorios'
+      path: '/relatorios'
+      fullPath: '/relatorios'
+      preLoaderRoute: typeof RelatoriosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/saidas-retornos': {
+      id: '/saidas-retornos'
+      path: '/saidas-retornos'
+      fullPath: '/saidas-retornos'
+      preLoaderRoute: typeof SaidasRetornosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/usuarios': {
+      id: '/usuarios'
+      path: '/usuarios'
+      fullPath: '/usuarios'
+      preLoaderRoute: typeof UsuariosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/veiculos': {
+      id: '/veiculos'
+      path: '/veiculos'
+      fullPath: '/veiculos'
+      preLoaderRoute: typeof VeiculosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AbastecimentosRoute: AbastecimentosRoute,
+  AjudaRoute: AjudaRoute,
+  ChecklistRoute: ChecklistRoute,
+  ConfiguracoesRoute: ConfiguracoesRoute,
+  DocumentosRoute: DocumentosRoute,
+  ManutencoesRoute: ManutencoesRoute,
+  MotoristasRoute: MotoristasRoute,
+  MultasRoute: MultasRoute,
+  RelatoriosRoute: RelatoriosRoute,
+  SaidasRetornosRoute: SaidasRetornosRoute,
+  UsuariosRoute: UsuariosRoute,
+  VeiculosRoute: VeiculosRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
