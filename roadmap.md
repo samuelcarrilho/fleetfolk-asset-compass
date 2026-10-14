@@ -1,6 +1,6 @@
 # FROTATech
-- [ ] Reproduce shared navigation and header from references.
-- [ ] Implement Início, Usuários and Veículos with demonstration records.
-- [ ] Implement validation, registration, editing, deletion, selection, search, filters and pagination.
-- [ ] Connect existing shortcuts and menus, honestly mark other modules unavailable.
-- [ ] Compare screenshots and test central interactions.
+- [x] Reproduce shared navigation and header from references.
+- [x] Implement Início, Usuários and Veículos with demonstration records.
+- [x] Implement validation, registration, editing, deletion, selection, search, filters and pagination.
+- [x] Connect existing shortcuts and menus, honestly mark other modules unavailable.
+- [x] Compare screenshots and test central interactions.
