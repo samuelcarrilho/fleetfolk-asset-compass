@@ -70,7 +70,7 @@ export function SettingsPage() {
   </div>;
 }
 
-const faqs = [
+const faqs: [string, string][] = [
   ['Como cadastro um veículo?', 'Acesse Veículos e Operações > Veículos e clique em "Cadastrar Veículo". Preencha placa, marca, modelo, ano, combustível e quilometragem.'],
   ['Como registro a saída e o retorno de um veículo?', 'Em Saídas e Retornos, use "Registrar Saída". Ao voltar, clique em "Registrar Retorno" e informe a quilometragem final, que deve ser maior que a de saída.'],
   ['Como sou avisado de documentos e CNH vencendo?', 'Os alertas usam os dias definidos em Configurações > Parâmetros de Alertas. Itens próximos do vencimento aparecem em amarelo e vencidos em vermelho.'],
