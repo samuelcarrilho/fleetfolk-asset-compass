@@ -43,7 +43,7 @@ export function RecordDialog({ title, fields, initial, schema, onSave, onClose, 
 }
 
 export type MenuItem = { label: string; onSelect: () => void };
-export function RowActions({ name, onEdit, onDelete, menu = [] }: { name: string; onEdit?: () => void; onDelete?: () => void; menu?: MenuItem[] }) {
+export function RowActions({ name, onEdit, onDelete, menu = [] }: { name: string; onEdit?: (() => void) | undefined; onDelete?: (() => void) | undefined; menu?: MenuItem[] | undefined }) {
   return <div className="row-actions">{onEdit && <Button title="Editar" aria-label={`Editar ${name}`} variant="ghost" size="icon" onClick={onEdit}><Pencil /></Button>}
     <DropdownMenu><DropdownMenuTrigger asChild><Button title="Mais opções" aria-label={`Opções de ${name}`} variant="ghost" size="icon"><MoreVertical /></Button></DropdownMenuTrigger>
       <DropdownMenuContent align="end">{onEdit && <DropdownMenuItem onSelect={onEdit}><Pencil />Editar</DropdownMenuItem>}{menu.map(m => <DropdownMenuItem key={m.label} onSelect={m.onSelect}>{m.label}</DropdownMenuItem>)}{onDelete && <DropdownMenuItem className="text-destructive" onSelect={onDelete}><Trash2 />Excluir</DropdownMenuItem>}</DropdownMenuContent></DropdownMenu></div>;
