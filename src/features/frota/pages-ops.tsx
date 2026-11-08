@@ -7,7 +7,7 @@ import { Stat } from './listings';
 import { DataTable, PageHeader, RecordDialog, useRefOptions, brDate, brl, type Field } from './crud';
 import { fuelSchema, documentSchema, fineSchema, fuelTypes, docTypes, fineStatuses, fleetAverage, consumptionTone, dueStatus, type Fuel, type Doc, type Fine } from './ops';
 
-export function FuelPage({ initialAction }: { initialAction?: string }) {
+export function FuelPage({ initialAction }: { initialAction?: string | undefined }) {
   const fleet = useFleet(); const ref = useRefOptions(); const [form, setForm] = useState<Partial<Fuel> | null>(initialAction ? {} : null);
   const avg = fleetAverage(fleet.data.fuel); const label = (id: string) => vehicleLabel(fleet.vehicles, id);
   const fields: Field[] = [{ key: 'date', label: 'Data', type: 'date' }, { key: 'vehicle', label: 'Veículo', options: ref.vehicles }, { key: 'driver', label: 'Motorista', options: ref.drivers }, { key: 'station', label: 'Posto' }, { key: 'fuel', label: 'Tipo de combustível', options: fuelTypes }, { key: 'liters', label: 'Litros', type: 'number' }, { key: 'total', label: 'Valor total (R$)', type: 'number' }, { key: 'kmPerL', label: 'Consumo médio (km/l)', type: 'number' }];

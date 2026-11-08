@@ -13,7 +13,7 @@ import { driverInfoSchema, cnhCategories, cnhAlert, tripSchema, closeTrip, maint
 const driverSchema = userSchema.omit({ profile: true }).merge(driverInfoSchema);
 type DriverRow = User & Partial<DriverInfo>;
 
-export function DriverForm({ record, onClose }: { record?: DriverRow; onClose: () => void }) {
+export function DriverForm({ record, onClose }: { record?: DriverRow | undefined; onClose: () => void }) {
   const fleet = useFleet();
   const fields: Field[] = [{ key: 'name', label: 'Nome completo' }, { key: 'cpf', label: 'CPF' }, { key: 'email', label: 'E-mail' }, { key: 'phone', label: 'Telefone' }, { key: 'cnh', label: 'Número da CNH' }, { key: 'category', label: 'Categoria da CNH', options: cnhCategories }, { key: 'validity', label: 'Validade da CNH', type: 'date' }, { key: 'status', label: 'Status', options: ['Ativo', 'Inativo'] }];
   return <RecordDialog title={record ? 'Editar motorista' : 'Cadastrar motorista'} fields={fields} schema={driverSchema} initial={{ status: 'Ativo', category: 'B', ...record }} onClose={onClose} onSave={raw => {
@@ -21,6 +21,7 @@ export function DriverForm({ record, onClose }: { record?: DriverRow; onClose: (
     if (fleet.users.some(u => u.id !== id && (u.cpf === d.cpf || u.email === d.email))) return 'Já existe um usuário com este e-mail ou CPF.';
     fleet.saveUser({ id, name: d.name, cpf: d.cpf, email: d.email, phone: d.phone, status: d.status, profile: 'Motorista' });
     fleet.saveRecord('driverInfo', { id, cnh: d.cnh, category: d.category, validity: d.validity }, 'Motorista salvo com sucesso.');
+    return undefined;
   }} />;
 }
 
@@ -42,7 +43,7 @@ export function DriversPage() {
 const returnSchema = z.object({ trip: z.string().min(1, 'Selecione a viagem.'), returnAt: z.string().min(1, 'Informe data e hora.'), returnKm: z.coerce.number({ message: 'Informe a quilometragem.' }) });
 const nowLocal = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
 
-export function TripsPage({ initialAction }: { initialAction?: string }) {
+export function TripsPage({ initialAction }: { initialAction?: string | undefined }) {
   const fleet = useFleet(); const ref = useRefOptions(); const label = (id: string) => vehicleLabel(fleet.vehicles, id);
   const [form, setForm] = useState<Partial<Trip> | null>(initialAction === 'saida' ? {} : null); const [ret, setRet] = useState<string | null>(initialAction === 'retorno' ? '' : null);
   const open = fleet.data.trips.filter(t => t.status === 'Em Rota');
@@ -58,12 +59,14 @@ export function TripsPage({ initialAction }: { initialAction?: string }) {
       if (!form.id && (v.status === 'Em manutenção' || v.status === 'Indisponível')) return `Veículo ${v.status.toLowerCase()} não pode sair.`;
       if (!form.id) fleet.saveVehicle({ ...v, status: 'Em uso' }, true);
       fleet.saveRecord('trips', { status: 'Em Rota', ...form, ...d, id: form.id ?? crypto.randomUUID() } as Trip, 'Saída registrada com sucesso.');
+      return undefined;
     }} />}
     {ret !== null && <RecordDialog title="Registrar retorno" fields={[{ key: 'trip', label: 'Viagem em rota', options: open.map(t => ({ value: t.id, label: `${label(t.vehicle)} · ${t.driver} · ${t.destination}` })), wide: true }, { key: 'returnAt', label: 'Retorno (data e hora)', type: 'datetime-local' }, { key: 'returnKm', label: 'Km de retorno', type: 'number' }]} schema={returnSchema} initial={{ trip: ret, returnAt: nowLocal() }} onClose={() => setRet(null)} onSave={raw => {
       const d = raw as z.infer<typeof returnSchema>; const trip = open.find(t => t.id === d.trip); if (!trip) return 'Viagem não encontrada.';
       const closed = closeTrip(trip, d.returnAt, d.returnKm); if (typeof closed === 'string') return closed;
       const v = fleet.vehicles.find(x => x.id === trip.vehicle); if (v) fleet.saveVehicle({ ...v, status: 'Disponível', km: Math.max(v.km, d.returnKm) }, true);
       fleet.saveRecord('trips', closed, 'Retorno registrado com sucesso.');
+      return undefined;
     }} />}
   </div>;
 }
@@ -81,7 +84,7 @@ export function MaintenancePage() {
   </div>;
 }
 
-export function ChecklistPage({ initialAction }: { initialAction?: string }) {
+export function ChecklistPage({ initialAction }: { initialAction?: string | undefined }) {
   const fleet = useFleet(); const ref = useRefOptions(); const label = (id: string) => vehicleLabel(fleet.vehicles, id);
   const [details, setDetails] = useState<Checklist | null>(null); const [form, setForm] = useState(!!initialAction); const [items, setItems] = useState<Record<string, boolean>>(() => Object.fromEntries(checklistItems.map(k => [k, true])));
   const fields: Field[] = [{ key: 'date', label: 'Data', type: 'date' }, { key: 'type', label: 'Tipo', options: ['Saída', 'Retorno'] }, { key: 'driver', label: 'Motorista', options: ref.drivers }, { key: 'vehicle', label: 'Veículo', options: ref.vehicles }, { key: 'notes', label: 'Observações', wide: true }];
