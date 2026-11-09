@@ -15,7 +15,9 @@ import { Route as AjudaRouteImport } from './routes/ajuda'
 import { Route as ChecklistRouteImport } from './routes/checklist'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as DocumentosRouteImport } from './routes/documentos'
+import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as ManutencoesRouteImport } from './routes/manutencoes'
+import { Route as MotoristaRouteImport } from './routes/motorista'
 import { Route as MotoristasRouteImport } from './routes/motoristas'
 import { Route as MultasRouteImport } from './routes/multas'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
@@ -53,9 +55,19 @@ const DocumentosRoute = DocumentosRouteImport.update({
   path: '/documentos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EntrarRoute = EntrarRouteImport.update({
+  id: '/entrar',
+  path: '/entrar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ManutencoesRoute = ManutencoesRouteImport.update({
   id: '/manutencoes',
   path: '/manutencoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MotoristaRoute = MotoristaRouteImport.update({
+  id: '/motorista',
+  path: '/motorista',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MotoristasRoute = MotoristasRouteImport.update({
@@ -96,7 +108,9 @@ export interface FileRoutesByFullPath {
   '/checklist': typeof ChecklistRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/documentos': typeof DocumentosRoute
+  '/entrar': typeof EntrarRoute
   '/manutencoes': typeof ManutencoesRoute
+  '/motorista': typeof MotoristaRoute
   '/motoristas': typeof MotoristasRoute
   '/multas': typeof MultasRoute
   '/relatorios': typeof RelatoriosRoute
@@ -111,7 +125,9 @@ export interface FileRoutesByTo {
   '/checklist': typeof ChecklistRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/documentos': typeof DocumentosRoute
+  '/entrar': typeof EntrarRoute
   '/manutencoes': typeof ManutencoesRoute
+  '/motorista': typeof MotoristaRoute
   '/motoristas': typeof MotoristasRoute
   '/multas': typeof MultasRoute
   '/relatorios': typeof RelatoriosRoute
@@ -127,7 +143,9 @@ export interface FileRoutesById {
   '/checklist': typeof ChecklistRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/documentos': typeof DocumentosRoute
+  '/entrar': typeof EntrarRoute
   '/manutencoes': typeof ManutencoesRoute
+  '/motorista': typeof MotoristaRoute
   '/motoristas': typeof MotoristasRoute
   '/multas': typeof MultasRoute
   '/relatorios': typeof RelatoriosRoute
@@ -144,7 +162,9 @@ export interface FileRouteTypes {
     | '/checklist'
     | '/configuracoes'
     | '/documentos'
+    | '/entrar'
     | '/manutencoes'
+    | '/motorista'
     | '/motoristas'
     | '/multas'
     | '/relatorios'
@@ -159,7 +179,9 @@ export interface FileRouteTypes {
     | '/checklist'
     | '/configuracoes'
     | '/documentos'
+    | '/entrar'
     | '/manutencoes'
+    | '/motorista'
     | '/motoristas'
     | '/multas'
     | '/relatorios'
@@ -174,7 +196,9 @@ export interface FileRouteTypes {
     | '/checklist'
     | '/configuracoes'
     | '/documentos'
+    | '/entrar'
     | '/manutencoes'
+    | '/motorista'
     | '/motoristas'
     | '/multas'
     | '/relatorios'
@@ -190,7 +214,9 @@ export interface RootRouteChildren {
   ChecklistRoute: typeof ChecklistRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   DocumentosRoute: typeof DocumentosRoute
+  EntrarRoute: typeof EntrarRoute
   ManutencoesRoute: typeof ManutencoesRoute
+  MotoristaRoute: typeof MotoristaRoute
   MotoristasRoute: typeof MotoristasRoute
   MultasRoute: typeof MultasRoute
   RelatoriosRoute: typeof RelatoriosRoute
@@ -243,11 +269,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocumentosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/entrar': {
+      id: '/entrar'
+      path: '/entrar'
+      fullPath: '/entrar'
+      preLoaderRoute: typeof EntrarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/manutencoes': {
       id: '/manutencoes'
       path: '/manutencoes'
       fullPath: '/manutencoes'
       preLoaderRoute: typeof ManutencoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/motorista': {
+      id: '/motorista'
+      path: '/motorista'
+      fullPath: '/motorista'
+      preLoaderRoute: typeof MotoristaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/motoristas': {
@@ -302,7 +342,9 @@ const rootRouteChildren: RootRouteChildren = {
   ChecklistRoute: ChecklistRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   DocumentosRoute: DocumentosRoute,
+  EntrarRoute: EntrarRoute,
   ManutencoesRoute: ManutencoesRoute,
+  MotoristaRoute: MotoristaRoute,
   MotoristasRoute: MotoristasRoute,
   MultasRoute: MultasRoute,
   RelatoriosRoute: RelatoriosRoute,
