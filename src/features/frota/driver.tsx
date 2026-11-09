@@ -29,7 +29,8 @@ export function DriverDashboard() {
   const fleet = useFleet(); const navigate = useNavigate(); const me = fleet.admin.name; const [action, setAction] = useState<Action | null>(null);
   const [items, setItems] = useState<Record<string, boolean>>(() => Object.fromEntries(checklistItems.map(k => [k, true])));
   const plate = (id: string) => fleet.vehicles.find(v => v.id === id)?.plate ?? '—';
-  const available = fleet.vehicles.filter(v => v.status === 'Disponível').map(v => ({ value: v.id, label: v.plate }));
+  const onRoute = new Set(fleet.data.trips.filter(t => t.status === 'Em Rota').map(t => t.vehicle));
+  const available = fleet.vehicles.filter(v => v.status === 'Disponível' && !onRoute.has(v.id)).map(v => ({ value: v.id, label: v.plate }));
   const myOpen = fleet.data.trips.filter(t => t.status === 'Em Rota' && t.driver === me);
   const myVehicles = [...new Set(myOpen.map(t => t.vehicle))].map(id => ({ value: id, label: plate(id) }));
   const vehicleOpts = myVehicles.length ? myVehicles : available;
@@ -49,7 +50,7 @@ export function DriverDashboard() {
       {!myOpen.length && <small className="driver-hint">Registrar Retorno fica disponível quando você tiver uma saída em rota.</small>}
     </main>
     {action === 'saida' && <RecordDialog title="Registrar saída" fields={saidaFields} schema={tripSchema.omit({ driver: true })} initial={{ departureAt: nowLocal() }} onClose={close} onSave={raw => {
-      const d = raw as Omit<z.infer<typeof tripSchema>, 'driver'>; const v = fleet.vehicles.find(x => x.id === d.vehicle); if (!v || v.status !== 'Disponível') return 'Veículo indisponível para saída.';
+      const d = raw as Omit<z.infer<typeof tripSchema>, 'driver'>; const v = fleet.vehicles.find(x => x.id === d.vehicle); if (!v || v.status !== 'Disponível' || onRoute.has(v.id)) return 'Veículo indisponível para saída.';
       fleet.saveVehicle({ ...v, status: 'Em uso' }, true); fleet.saveRecord('trips', { ...d, driver: me, status: 'Em Rota', id: crypto.randomUUID() } as Trip, 'Saída registrada com sucesso.'); return undefined; }} />}
     {action === 'retorno' && <RecordDialog title="Registrar retorno" fields={[{ key: 'trip', label: 'Viagem em rota', options: myOpen.map(t => ({ value: t.id, label: `${plate(t.vehicle)} · ${t.destination}` })), wide: true }, { key: 'returnAt', label: 'Retorno (data e hora)', type: 'datetime-local' }, { key: 'returnKm', label: 'Km de retorno', type: 'number' }]} schema={returnSchema} initial={{ trip: myOpen[0]?.id ?? '', returnAt: nowLocal() }} onClose={close} onSave={raw => {
       const d = raw as z.infer<typeof returnSchema>; const trip = myOpen.find(t => t.id === d.trip); if (!trip) return 'Viagem não encontrada.';
