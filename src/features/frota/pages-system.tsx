@@ -1,3 +1,4 @@
+import { settingsSections } from './access';
 import { useState } from 'react';
 import { Fuel, Wrench, TriangleAlert, FileText, Download, Printer, UserRound, Building2, BellRing, BookOpen, Mail, Phone, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -46,7 +47,7 @@ export function ReportsPage() {
 }
 
 const adminSchema = z.object({ name: z.string().trim().min(3, 'Informe o nome completo.').max(100), email: z.string().trim().email('Informe um e-mail válido.').max(255), phone: z.string().trim().min(10, 'Informe um telefone válido.').max(20) });
-const sections = [{ id: 'perfil', label: 'Perfil do Administrador', icon: UserRound }, { id: 'oficinas', label: 'Empresas Parceiras/Oficinas', icon: Building2 }, { id: 'alertas', label: 'Parâmetros de Alertas', icon: BellRing }] as const;
+const sections = [{ id: 'perfil', label: 'Perfil', icon: UserRound }, { id: 'oficinas', label: 'Empresas Parceiras/Oficinas', icon: Building2 }, { id: 'alertas', label: 'Parâmetros de Alertas', icon: BellRing }] as const;
 
 function InlineForm<T extends z.ZodTypeAny>({ schema, fields, initial, onSave, button }: { schema: T; fields: Field[]; initial: Record<string, unknown>; onSave: (d: z.infer<T>) => void; button: string }) {
   const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(fields.map(f => [f.key, String(initial[f.key] ?? '')]))); const [errors, setErrors] = useState<Record<string, string>>({});
@@ -56,13 +57,13 @@ function InlineForm<T extends z.ZodTypeAny>({ schema, fields, initial, onSave, b
 }
 
 export function SettingsPage() {
-  const fleet = useFleet(); const [section, setSection] = useState<(typeof sections)[number]['id']>('perfil'); const [shop, setShop] = useState<Partial<Shop> | null>(null);
+  const fleet = useFleet(); const role = fleet.session?.role ?? 'Administrador'; const [section, setSection] = useState<(typeof sections)[number]['id']>('perfil'); const [shop, setShop] = useState<Partial<Shop> | null>(null);
   const shopFields: Field[] = [{ key: 'name', label: 'Nome' }, { key: 'service', label: 'Serviço' }, { key: 'phone', label: 'Telefone' }, { key: 'city', label: 'Cidade' }];
   return <div className="page-content"><PageHeader title="Configurações" description="Ajustes do sistema." />
-    <div className="settings-layout"><nav className="settings-nav" aria-label="Seções de configurações">{sections.map(s => <button key={s.id} className={section === s.id ? 'active' : ''} onClick={() => setSection(s.id)}><s.icon />{s.label}</button>)}</nav>
+    <div className="settings-layout"><nav className="settings-nav" aria-label="Seções de configurações">{sections.filter(s => settingsSections(role).includes(s.id)).map(s => <button key={s.id} className={section === s.id ? 'active' : ''} onClick={() => setSection(s.id)}><s.icon />{s.label}</button>)}</nav>
       <section className="settings-panel">
-        {section === 'perfil' && <><h2>Perfil do Administrador</h2><InlineForm key="perfil" schema={adminSchema} initial={fleet.admin} fields={[{ key: 'name', label: 'Nome completo' }, { key: 'email', label: 'E-mail' }, { key: 'phone', label: 'Telefone' }]} button="Salvar perfil" onSave={fleet.setAdmin} /></>}
-        {section === 'alertas' && <><h2>Parâmetros de Alertas</h2><p className="text-muted-foreground text-sm mb-4">Quantos dias antes do vencimento o sistema deve avisar.</p><InlineForm key="alertas" schema={settingsSchema} initial={fleet.settings} fields={[{ key: 'cnhDays', label: 'Dias para aviso de vencimento da CNH', type: 'number' }, { key: 'docDays', label: 'Dias para aviso de IPVA, licenciamento e seguro', type: 'number' }]} button="Salvar parâmetros" onSave={fleet.setSettings} /></>}
+        {section === 'perfil' && <><h2>{role === 'Administrador' ? 'Perfil do Administrador' : 'Meu Perfil'}</h2><InlineForm key="perfil" schema={adminSchema} initial={fleet.admin} fields={[{ key: 'name', label: 'Nome completo' }, { key: 'email', label: 'E-mail' }, { key: 'phone', label: 'Telefone' }]} button="Salvar perfil" onSave={fleet.setAdmin} /></>}
+        {section === 'alertas' && role === 'Administrador' && <><h2>Parâmetros de Alertas</h2><p className="text-muted-foreground text-sm mb-4">Quantos dias antes do vencimento o sistema deve avisar.</p><InlineForm key="alertas" schema={settingsSchema} initial={fleet.settings} fields={[{ key: 'cnhDays', label: 'Dias para aviso de vencimento da CNH', type: 'number' }, { key: 'docDays', label: 'Dias para aviso de IPVA, licenciamento e seguro', type: 'number' }]} button="Salvar parâmetros" onSave={fleet.setSettings} /></>}
         {section === 'oficinas' && <><div className="flex items-center justify-between mb-3"><h2>Empresas Parceiras/Oficinas</h2><Button onClick={() => setShop({})}><Plus />Cadastrar oficina</Button></div>
           <DataTable<Shop> rows={fleet.data.shops} noun="oficinas" searchPlaceholder="Pesquisar oficina..." rowName={r => r.name} search={r => `${r.name} ${r.service} ${r.city}`} columns={[{ head: 'NOME', cell: r => r.name }, { head: 'SERVIÇO', cell: r => r.service }, { head: 'TELEFONE', cell: r => r.phone }, { head: 'CIDADE', cell: r => r.city }]} onEdit={r => setShop(r)} onDelete={r => fleet.removeRecord('shops', r.id)} /></>}
       </section></div>

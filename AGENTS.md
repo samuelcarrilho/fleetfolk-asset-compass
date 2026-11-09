@@ -12,3 +12,4 @@
 - Keep FROTATech demonstration data in the shared FleetProvider and validate mutations with the shared Zod schemas; this keeps list screens and indicators consistent without implying permanent storage.
 - Use src/features/frota for shared application UI and distinct TanStack leaf routes for each navigation item; this preserves the reference shell and makes unavailable modules explicit.
 - Keep visual styling and semantic colors in src/styles.css; this centralizes fidelity adjustments across all reference screens.
+- Access is decided only by src/features/frota/access.ts (routeAccess/can/settingsSections); one table keeps menu, guards and buttons in sync. Simulated, client-only.
