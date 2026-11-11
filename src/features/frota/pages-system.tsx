@@ -1,23 +1,24 @@
 import { settingsSections } from './access';
 import { useState } from 'react';
-import { Fuel, Wrench, TriangleAlert, FileText, Download, Printer, UserRound, Building2, BellRing, BookOpen, Mail, Phone, Plus } from 'lucide-react';
+import { Fuel, Wrench, TriangleAlert, FileText, Download, Printer, UserRound, BellRing, BookOpen, Mail, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { z } from 'zod';
 import { useFleet, vehicleLabel } from './store';
-import { DataTable, PageHeader, RecordDialog, useRefOptions, brDate, brl, type Field } from './crud';
-import { monthlyFuelReport, toCsv, settingsSchema, shopSchema, dueStatus, type Shop } from './ops';
+import { PageHeader, useRefOptions, brDate, brl, type Field } from './crud';
+import { monthlyFuelReport, toCsv, settingsSchema, dueStatus } from './ops';
 
 function download(name: string, csv: string) {
   const url = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }));
   const a = document.createElement('a'); a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
 }
-function printTable(title: string, head: string[], rows: (string | number)[][]) {
-  const w = window.open('', '_blank'); if (!w) return false;
-  const esc = (s: string | number) => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] ?? c));
-  w.document.write(`<html><head><title>${esc(title)}</title><style>body{font-family:Arial;padding:24px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #ccc;padding:6px;text-align:left}</style></head><body><h2>${esc(title)}</h2><p>Dados de demonstração — FROTATech</p><table><tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr>${rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table></body></html>`);
-  w.document.close(); w.focus(); w.print(); return true;
+async function downloadPdf(name: string, title: string, subtitle: string, head: string[], rows: (string | number)[][], total: string) {
+  const [{ jsPDF }, { default: autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
+  const doc = new jsPDF({ orientation: 'landscape' });
+  doc.setFontSize(16); doc.text(title, 14, 16); doc.setFontSize(10); doc.text(subtitle, 14, 23); doc.text('Documento demonstrativo - FROTATech', 14, 29);
+  autoTable(doc, { head: [head], body: rows.map(r => r.map(String)), startY: 34, styles: { fontSize: 9 }, foot: [[total, ...head.slice(1).map(() => '')]] });
+  doc.save(name);
 }
 
 export function ReportsPage() {
@@ -27,10 +28,10 @@ export function ReportsPage() {
   function generate(kind: 'pdf' | 'excel') {
     if (!rows.length) { fleet.notify('Nenhum abastecimento encontrado para os filtros escolhidos.'); return; }
     if (kind === 'excel') { download(`abastecimento-${f.month || 'todos'}.csv`, toCsv(head, table)); fleet.notify('Planilha gerada com sucesso.'); }
-    else if (!printTable(`Monitoramento de Abastecimento Mensal ${f.month}`, head, table)) fleet.notify('Permita janelas pop-up para gerar o PDF.');
+    else downloadPdf(`abastecimento-${f.month || 'todos'}.pdf`, 'Monitoramento de Abastecimento Mensal', `Mês: ${f.month || 'Todos'} · Motorista: ${f.driver || 'Todos'} · Veículo: ${f.vehicle ? label(f.vehicle) : 'Todos'}`, head, table, `Total: ${rows.length} abastecimento(s) · ${rows.reduce((s, r) => s + r.liters, 0).toLocaleString('pt-BR')} L · ${brl(rows.reduce((s, r) => s + r.total, 0))}`).then(() => fleet.notify('PDF gerado com sucesso.'), () => fleet.notify('Não foi possível gerar o PDF.'));
   }
   const others = [
-    { icon: Wrench, title: 'Custos de Manutenção', text: 'Valores por veículo e oficina.', run: () => download('manutencoes.csv', toCsv(['Tipo', 'Veículo', 'Oficina', 'Data', 'Custo', 'Status'], fleet.data.maintenance.map(m => [m.kind, label(m.vehicle), m.shop, brDate(m.date), m.cost, m.status]))) },
+    { icon: Wrench, title: 'Custos de Manutenção', text: 'Valores por veículo.', run: () => download('manutencoes.csv', toCsv(['Tipo', 'Veículo', 'Data', 'Custo', 'Status'], fleet.data.maintenance.map(m => [m.kind, label(m.vehicle), brDate(m.date), m.cost, m.status]))) },
     { icon: TriangleAlert, title: 'Multas por Motorista', text: 'Infrações e valores por condutor.', run: () => download('multas.csv', toCsv(['Data', 'Veículo', 'Motorista', 'Infração', 'Valor', 'Status'], fleet.data.fines.map(m => [brDate(m.date), label(m.vehicle), m.driver, m.description, m.amount, m.status]))) },
     { icon: FileText, title: 'Vencimento de Documentos', text: 'IPVA, licenciamento e seguros.', run: () => download('documentos.csv', toCsv(['Veículo', 'Tipo', 'Vencimento', 'Pagamento', 'Situação'], fleet.data.docs.map(d => [label(d.vehicle), d.type, brDate(d.due), d.payment, dueStatus(d.due, fleet.settings.docDays)]))) },
   ];
@@ -47,7 +48,7 @@ export function ReportsPage() {
 }
 
 const adminSchema = z.object({ name: z.string().trim().min(3, 'Informe o nome completo.').max(100), email: z.string().trim().email('Informe um e-mail válido.').max(255), phone: z.string().trim().min(10, 'Informe um telefone válido.').max(20) });
-const sections = [{ id: 'perfil', label: 'Perfil', icon: UserRound }, { id: 'oficinas', label: 'Empresas Parceiras/Oficinas', icon: Building2 }, { id: 'alertas', label: 'Parâmetros de Alertas', icon: BellRing }] as const;
+const sections = [{ id: 'perfil', label: 'Perfil', icon: UserRound }, { id: 'alertas', label: 'Parâmetros de Alertas', icon: BellRing }] as const;
 
 function InlineForm<T extends z.ZodTypeAny>({ schema, fields, initial, onSave, button }: { schema: T; fields: Field[]; initial: Record<string, unknown>; onSave: (d: z.infer<T>) => void; button: string }) {
   const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(fields.map(f => [f.key, String(initial[f.key] ?? '')]))); const [errors, setErrors] = useState<Record<string, string>>({});
@@ -57,17 +58,13 @@ function InlineForm<T extends z.ZodTypeAny>({ schema, fields, initial, onSave, b
 }
 
 export function SettingsPage() {
-  const fleet = useFleet(); const role = fleet.session?.role ?? 'Administrador'; const [section, setSection] = useState<(typeof sections)[number]['id']>('perfil'); const [shop, setShop] = useState<Partial<Shop> | null>(null);
-  const shopFields: Field[] = [{ key: 'name', label: 'Nome' }, { key: 'service', label: 'Serviço' }, { key: 'phone', label: 'Telefone' }, { key: 'city', label: 'Cidade' }];
+  const fleet = useFleet(); const role = fleet.session?.role ?? 'Administrador'; const [section, setSection] = useState<(typeof sections)[number]['id']>('perfil');
   return <div className="page-content"><PageHeader title="Configurações" description="Ajustes do sistema." />
     <div className="settings-layout"><nav className="settings-nav" aria-label="Seções de configurações">{sections.filter(s => settingsSections(role).includes(s.id)).map(s => <button key={s.id} className={section === s.id ? 'active' : ''} onClick={() => setSection(s.id)}><s.icon />{s.label}</button>)}</nav>
       <section className="settings-panel">
         {section === 'perfil' && <><h2>{role === 'Administrador' ? 'Perfil do Administrador' : 'Meu Perfil'}</h2><InlineForm key="perfil" schema={adminSchema} initial={fleet.admin} fields={[{ key: 'name', label: 'Nome completo' }, { key: 'email', label: 'E-mail' }, { key: 'phone', label: 'Telefone' }]} button="Salvar perfil" onSave={fleet.setAdmin} /></>}
         {section === 'alertas' && role === 'Administrador' && <><h2>Parâmetros de Alertas</h2><p className="text-muted-foreground text-sm mb-4">Quantos dias antes do vencimento o sistema deve avisar.</p><InlineForm key="alertas" schema={settingsSchema} initial={fleet.settings} fields={[{ key: 'cnhDays', label: 'Dias para aviso de vencimento da CNH', type: 'number' }, { key: 'docDays', label: 'Dias para aviso de IPVA, licenciamento e seguro', type: 'number' }]} button="Salvar parâmetros" onSave={fleet.setSettings} /></>}
-        {section === 'oficinas' && <><div className="flex items-center justify-between mb-3"><h2>Empresas Parceiras/Oficinas</h2><Button onClick={() => setShop({})}><Plus />Cadastrar oficina</Button></div>
-          <DataTable<Shop> rows={fleet.data.shops} noun="oficinas" searchPlaceholder="Pesquisar oficina..." rowName={r => r.name} search={r => `${r.name} ${r.service} ${r.city}`} columns={[{ head: 'NOME', cell: r => r.name }, { head: 'SERVIÇO', cell: r => r.service }, { head: 'TELEFONE', cell: r => r.phone }, { head: 'CIDADE', cell: r => r.city }]} onEdit={r => setShop(r)} onDelete={r => fleet.removeRecord('shops', r.id)} /></>}
       </section></div>
-    {shop && <RecordDialog title={shop.id ? 'Editar oficina' : 'Cadastrar oficina'} fields={shopFields} schema={shopSchema} initial={shop} onClose={() => setShop(null)} onSave={d => fleet.saveRecord('shops', { ...(d as Omit<Shop, 'id'>), id: shop.id ?? crypto.randomUUID() }, 'Oficina salva com sucesso.')} />}
   </div>;
 }
 

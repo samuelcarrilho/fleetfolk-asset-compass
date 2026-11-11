@@ -12,16 +12,17 @@ export const docTypes = ['IPVA', 'Licenciamento', 'Seguro'] as const;
 export const fineStatuses = ['Pendente', 'Paga', 'Recorrida'] as const;
 export const cnhCategories = ['A', 'B', 'AB', 'C', 'D', 'E'] as const;
 export const maintenanceStatuses = ['Agendada', 'Em Andamento', 'Concluída'] as const;
-export const checklistItems = ['Pneus', 'Iluminação', 'Óleo', 'Macaco', 'Estepe', 'Freios', 'Extintor'] as const;
+export const checklistItems = ['Para-brisa', 'Lanternas', 'Faróis', 'Luzes de freio', 'Luzes de ré', 'Condição dos pneus', 'Condições do óleo'] as const;
+export const conditions = ['Bom', 'Com Avaria', 'Ruim'] as const;
+export type Condition = (typeof conditions)[number];
 
 export const fuelSchema = z.object({ date, vehicle: vehicleRef, driver: driverRef, station: text('Informe o posto.'), fuel: z.enum(fuelTypes), liters: money, total: money, kmPerL: z.coerce.number().positive('Informe o consumo.').max(100) });
 export const documentSchema = z.object({ vehicle: vehicleRef, type: z.enum(docTypes), due: date, payment: z.enum(['Pago', 'Pendente']) });
 export const fineSchema = z.object({ date, vehicle: vehicleRef, driver: driverRef, description: text('Descreva a infração.', 200), amount: money, status: z.enum(fineStatuses) });
 export const driverInfoSchema = z.object({ cnh: z.string().regex(/^\d{11}$/, 'A CNH deve ter 11 dígitos.'), category: z.enum(cnhCategories), validity: date });
 export const tripSchema = z.object({ vehicle: vehicleRef, driver: driverRef, destination: text('Informe o destino.'), purpose: text('Informe a finalidade.'), departureAt: dateTime, departureKm: z.coerce.number().min(0).max(10000000) });
-export const maintenanceSchema = z.object({ kind: z.enum(['Preventiva', 'Corretiva']), vehicle: vehicleRef, shop: text('Informe a oficina.'), date, cost: z.coerce.number().min(0).max(10000000), next: z.string().trim().max(60), status: z.enum(maintenanceStatuses) });
+export const maintenanceSchema = z.object({ kind: z.enum(['Preventiva', 'Corretiva']), vehicle: vehicleRef, date, cost: z.coerce.number().min(0).max(10000000), next: z.string().trim().max(60), status: z.enum(maintenanceStatuses) });
 export const checklistSchema = z.object({ date, driver: driverRef, vehicle: vehicleRef, type: z.enum(['Saída', 'Retorno']), notes: z.string().trim().max(300) });
-export const shopSchema = z.object({ name: text('Informe o nome.'), service: text('Informe o serviço.'), phone: z.string().trim().min(10, 'Informe um telefone válido.').max(20), city: text('Informe a cidade.') });
 export const settingsSchema = z.object({ cnhDays: z.coerce.number().int().min(1, 'Mínimo de 1 dia.').max(365), docDays: z.coerce.number().int().min(1, 'Mínimo de 1 dia.').max(365) });
 
 type WithId<T extends z.ZodTypeAny> = z.infer<T> & { id: string };
@@ -31,8 +32,7 @@ export type Fine = WithId<typeof fineSchema>;
 export type DriverInfo = z.infer<typeof driverInfoSchema> & { id: string };
 export type Trip = WithId<typeof tripSchema> & { returnAt?: string; returnKm?: number; status: 'Em Rota' | 'Concluída' };
 export type Maintenance = WithId<typeof maintenanceSchema>;
-export type Checklist = WithId<typeof checklistSchema> & { items: Record<string, boolean>; status: 'Aprovado' | 'Com Avarias' | 'Reprovado' };
-export type Shop = WithId<typeof shopSchema>;
+export type Checklist = WithId<typeof checklistSchema> & { items: Record<string, Condition>; status: 'Aprovado' | 'Com Avarias' | 'Reprovado' };
 export type Settings = z.infer<typeof settingsSchema>;
 
 export function daysUntil(day: string, now = new Date()) {
@@ -51,9 +51,32 @@ export function cnhAlert(validity: string, warnDays: number, now = new Date()) {
 export function fleetAverage(rows: Fuel[]) { return rows.length ? rows.reduce((s, r) => s + r.kmPerL, 0) / rows.length : 0; }
 /** Lower km/l means higher consumption. Within 10% below the fleet average is still acceptable. */
 export function consumptionTone(kmPerL: number, average: number) { return kmPerL >= average * 0.9 ? 'green' : 'red'; }
-export function checklistStatus(items: Record<string, boolean>): Checklist['status'] {
-  const failed = Object.values(items).filter(v => !v).length;
-  return failed === 0 ? 'Aprovado' : failed <= 2 ? 'Com Avarias' : 'Reprovado';
+/** All Bom = Aprovado; any Ruim = Reprovado; otherwise Com Avarias. */
+export function checklistStatus(items: Record<string, Condition>): Checklist['status'] {
+  const v = Object.values(items);
+  return v.includes('Ruim') ? 'Reprovado' : v.every(x => x === 'Bom') ? 'Aprovado' : 'Com Avarias';
+}
+export type DriverInput = { mode: 'saida' | 'retorno'; id: string; driver: string; now: string; items: Partial<Record<string, Condition>>; vehicle?: string; destination?: string; departureKm?: string; returnKm?: string; openTrip?: Trip | undefined };
+/** Builds the trip + checklist from the driver's single submit, or returns field errors (nothing is saved on error). */
+export function buildDriverSubmission(i: DriverInput): { trip: Trip; checklist: Checklist } | { errors: Record<string, string> } {
+  const errors: Record<string, string> = {};
+  for (const k of checklistItems) if (!i.items[k]) errors[k] = 'Selecione uma opção.';
+  const km = (v?: string) => (v ?? '').trim() === '' ? NaN : Number(v);
+  let trip: Trip | undefined;
+  if (i.mode === 'saida') {
+    if (!i.vehicle) errors.vehicle = 'Selecione um veículo.';
+    if ((i.destination ?? '').trim().length < 2) errors.destination = 'Informe o destino.';
+    const d = km(i.departureKm); if (!Number.isFinite(d) || d < 0) errors.departureKm = 'Informe o odômetro de saída.';
+    if (!Object.keys(errors).length) trip = { id: i.id, vehicle: i.vehicle!, driver: i.driver, destination: i.destination!.trim(), purpose: 'Rotina do motorista', departureAt: i.now, departureKm: d, status: 'Em Rota' };
+  } else if (!i.openTrip) errors.returnKm = 'Você não tem viagem em aberto.';
+  else {
+    const r = km(i.returnKm);
+    if (!Number.isFinite(r) || r <= i.openTrip.departureKm) errors.returnKm = `O odômetro de entrada deve ser maior que ${i.openTrip.departureKm.toLocaleString('pt-BR')} km.`;
+    else if (!Object.keys(errors).length) { const c = closeTrip(i.openTrip, i.now, r); if (typeof c === 'string') errors.returnKm = c; else trip = c; }
+  }
+  if (Object.keys(errors).length || !trip) return { errors };
+  const items = Object.fromEntries(checklistItems.map(k => [k, i.items[k]!])) as Record<string, Condition>;
+  return { trip, checklist: { id: `${i.id}-c`, date: i.now.slice(0, 10), driver: i.driver, vehicle: trip.vehicle, type: i.mode === 'saida' ? 'Saída' : 'Retorno', notes: '', items, status: checklistStatus(items) } };
 }
 export function closeTrip(trip: Trip, returnAt: string, returnKm: number): Trip | string {
   if (trip.status !== 'Em Rota') return 'Esta viagem já foi concluída.';
@@ -78,11 +101,6 @@ export const initialDocs: Doc[] = Array.from({ length: 15 }, (_, i) => ({ id: `d
 export const initialFines: Fine[] = Array.from({ length: 10 }, (_, i) => ({ id: `m${i}`, date: `2026-${i < 5 ? '10' : '09'}-${String(3 + i * 2).padStart(2, '0')}`, vehicle: `v${(i * 3) % 8}`, driver: pick(drivers, i), description: pick(['Excesso de velocidade', 'Estacionamento proibido', 'Avanço de sinal', 'Uso de celular'], i), amount: pick([130.16, 195.23, 293.47, 88.38], i), status: pick(fineStatuses, i) }));
 export const initialDriverInfo: DriverInfo[] = ['u2', 'u4', 'u5', 'u7', 'u12', 'u13', 'u14', 'u15', 'u16', 'u17'].map((id, i) => ({ id, cnh: String(10000000000 + i * 1234567891).slice(0, 11), category: pick(['B', 'D', 'AB', 'C', 'E'] as const, i), validity: pick(['2028-05-10', '2026-11-25', '2026-09-30', '2029-02-14', '2027-07-01'], i) }));
 export const initialTrips: Trip[] = Array.from({ length: 9 }, (_, i) => { const day = String(7 - (i % 6)).padStart(2, '0'); const base: Trip = { id: `t${i}`, vehicle: `v${i % 8}`, driver: pick(drivers, i), destination: pick(['Maracanaú', 'Caucaia', 'Centro - Fortaleza', 'Eusébio', 'Aquiraz'], i), purpose: pick(['Entrega de materiais', 'Visita técnica', 'Reunião com cliente', 'Coleta'], i), departureAt: `2026-11-${day}T0${7 + (i % 3)}:30`, departureKm: 40000 + i * 2350, status: 'Em Rota' }; return i < 2 ? base : { ...base, returnAt: `2026-11-${day}T1${5 + (i % 3)}:10`, returnKm: base.departureKm + 85 + i * 12, status: 'Concluída' }; });
-export const initialMaintenance: Maintenance[] = Array.from({ length: 10 }, (_, i) => ({ id: `r${i}`, kind: i % 3 === 2 ? 'Corretiva' : 'Preventiva', vehicle: `v${(i * 5) % 8}`, shop: pick(['Auto Center Fortaleza', 'Oficina Mecânica Silva', 'Concessionária Toyota'], i), date: `2026-${i < 4 ? '11' : '10'}-${String(5 + i * 2).padStart(2, '0')}`, cost: pick([450, 1280, 320.5, 2150, 780], i), next: i % 3 === 2 ? '' : i % 2 ? '2027-05-10' : `${60000 + i * 5000} km`, status: pick(maintenanceStatuses, i) }));
-export const initialChecklists: Checklist[] = Array.from({ length: 9 }, (_, i) => { const items = Object.fromEntries(checklistItems.map((k, j) => [k, !(i % 4 === 1 && j === 0) && !(i % 4 === 3 && j < 3)])); return { id: `c${i}`, date: `2026-11-${String(7 - (i % 5)).padStart(2, '0')}`, driver: pick(drivers, i), vehicle: `v${i % 8}`, type: i % 2 ? 'Retorno' : 'Saída', notes: i % 4 === 1 ? 'Pneu dianteiro com desgaste.' : '', items, status: checklistStatus(items) }; });
-export const initialShops: Shop[] = [
-  { id: 's0', name: 'Auto Center Fortaleza', service: 'Mecânica geral', phone: '(85) 3222-1000', city: 'Fortaleza' },
-  { id: 's1', name: 'Oficina Mecânica Silva', service: 'Suspensão e freios', phone: '(85) 3333-2000', city: 'Maracanaú' },
-  { id: 's2', name: 'Concessionária Toyota', service: 'Revisões preventivas', phone: '(85) 3444-3000', city: 'Fortaleza' },
-];
+export const initialMaintenance: Maintenance[] = Array.from({ length: 10 }, (_, i) => ({ id: `r${i}`, kind: i % 3 === 2 ? 'Corretiva' : 'Preventiva', vehicle: `v${(i * 5) % 8}`, date: `2026-${i < 4 ? '11' : '10'}-${String(5 + i * 2).padStart(2, '0')}`, cost: pick([450, 1280, 320.5, 2150, 780], i), next: i % 3 === 2 ? '' : i % 2 ? '2027-05-10' : `${60000 + i * 5000} km`, status: pick(maintenanceStatuses, i) }));
+export const initialChecklists: Checklist[] = Array.from({ length: 9 }, (_, i) => { const items = Object.fromEntries(checklistItems.map((k, j) => [k, i % 4 === 1 && j === 5 ? 'Com Avaria' : i % 4 === 3 && j < 2 ? 'Ruim' : 'Bom'])) as Record<string, Condition>; return { id: `c${i}`, date: `2026-11-${String(7 - (i % 5)).padStart(2, '0')}`, driver: pick(drivers, i), vehicle: `v${i % 8}`, type: i % 2 ? 'Retorno' : 'Saída', notes: i % 4 === 1 ? 'Pneu dianteiro com desgaste.' : '', items, status: checklistStatus(items) }; });
 export const defaultSettings: Settings = { cnhDays: 30, docDays: 30 };

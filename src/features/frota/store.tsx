@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Role } from './access';
 import { initialUsers, initialVehicles, type User, type Vehicle } from './data';
-import { initialFuel, initialDocs, initialFines, initialDriverInfo, initialTrips, initialMaintenance, initialChecklists, initialShops, defaultSettings, type Fuel, type Doc, type Fine, type DriverInfo, type Trip, type Maintenance, type Checklist, type Shop, type Settings } from './ops';
+import { initialFuel, initialDocs, initialFines, initialDriverInfo, initialTrips, initialMaintenance, initialChecklists, defaultSettings, type Fuel, type Doc, type Fine, type DriverInfo, type Trip, type Maintenance, type Checklist, type Settings } from './ops';
 
-export type Collections = { fuel: Fuel[]; docs: Doc[]; fines: Fine[]; driverInfo: DriverInfo[]; trips: Trip[]; maintenance: Maintenance[]; checklists: Checklist[]; shops: Shop[] };
+export type Collections = { fuel: Fuel[]; docs: Doc[]; fines: Fine[]; driverInfo: DriverInfo[]; trips: Trip[]; maintenance: Maintenance[]; checklists: Checklist[] };
 export type CollectionName = keyof Collections;
 export type Admin = { name: string; email: string; phone: string };
 type Store = {
@@ -19,7 +19,7 @@ const globalStore = globalThis as typeof globalThis & { __fleetContext?: React.C
 const Context = globalStore.__fleetContext ??= createContext<Store | null>(null);
 export function FleetProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState(initialUsers); const [vehicles, setVehicles] = useState(initialVehicles); const [message, notify] = useState('');
-  const [data, setData] = useState<Collections>({ fuel: initialFuel, docs: initialDocs, fines: initialFines, driverInfo: initialDriverInfo, trips: initialTrips, maintenance: initialMaintenance, checklists: initialChecklists, shops: initialShops });
+  const [data, setData] = useState<Collections>({ fuel: initialFuel, docs: initialDocs, fines: initialFines, driverInfo: initialDriverInfo, trips: initialTrips, maintenance: initialMaintenance, checklists: initialChecklists });
   const [settings, setSettings] = useState<Settings>(defaultSettings); const [admin, setAdmin] = useState<Admin>({ name: 'João Silva', email: 'joao.silva@empresa.com', phone: '(85) 99999-1111' });
   const [session, setSession] = useState<Session | null>(null); const [ready, setReady] = useState(false);
   useEffect(() => { try { const raw = sessionStorage.getItem('frota-session'); if (raw) { const s = JSON.parse(raw) as Session & Admin; setSession({ userId: s.userId, role: s.role }); setAdmin({ name: s.name, email: s.email, phone: s.phone }); } } catch { /* ignore */ } setReady(true); }, []);

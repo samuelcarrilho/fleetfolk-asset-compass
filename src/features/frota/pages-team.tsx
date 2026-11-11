@@ -6,9 +6,11 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { useFleet, vehicleLabel } from './store';
 import { Badge } from './ui';
+import { DriverChecklist, ConditionPicker } from './driver';
+const allGood = () => Object.fromEntries(checklistItems.map(k => [k, 'Bom'])) as Record<string, Condition>;
 import { userSchema, type User } from './data';
 import { DataTable, PageHeader, RecordDialog, useRefOptions, brDate, brl, type Field } from './crud';
-import { driverInfoSchema, cnhCategories, cnhAlert, tripSchema, closeTrip, maintenanceSchema, maintenanceStatuses, checklistSchema, checklistItems, checklistStatus, type DriverInfo, type Trip, type Maintenance, type Checklist } from './ops';
+import { driverInfoSchema, cnhCategories, cnhAlert, tripSchema, closeTrip, maintenanceSchema, maintenanceStatuses, checklistSchema, checklistItems, checklistStatus, type Condition, type DriverInfo, type Trip, type Maintenance, type Checklist } from './ops';
 
 const driverSchema = userSchema.omit({ profile: true }).merge(driverInfoSchema);
 type DriverRow = User & Partial<DriverInfo>;
@@ -73,20 +75,24 @@ export function TripsPage({ initialAction }: { initialAction?: string | undefine
 
 export function MaintenancePage() {
   const fleet = useFleet(); const ref = useRefOptions(); const [tab, setTab] = useState<'Preventiva' | 'Corretiva'>('Preventiva'); const [form, setForm] = useState<Partial<Maintenance> | null>(null); const label = (id: string) => vehicleLabel(fleet.vehicles, id);
-  const fields: Field[] = [{ key: 'kind', label: 'Tipo', options: ['Preventiva', 'Corretiva'] }, { key: 'vehicle', label: 'Veículo', options: ref.vehicles }, { key: 'shop', label: 'Oficina', options: fleet.data.shops.map(s => s.name) }, { key: 'date', label: 'Data', type: 'date' }, { key: 'cost', label: 'Custo (R$)', type: 'number' }, { key: 'next', label: 'Próxima revisão (km ou data)' }, { key: 'status', label: 'Status', options: maintenanceStatuses }];
+  const fields: Field[] = [{ key: 'kind', label: 'Tipo', options: ['Preventiva', 'Corretiva'] }, { key: 'vehicle', label: 'Veículo', options: ref.vehicles }, { key: 'date', label: 'Data', type: 'date' }, { key: 'cost', label: 'Custo (R$)', type: 'number' }, { key: 'next', label: 'Próxima revisão (km ou data)' }, { key: 'status', label: 'Status', options: maintenanceStatuses }];
   return <div className="page-content"><PageHeader title="Manutenções" description="Gestão de revisões preventivas e consertos."><Button className="register-button" onClick={() => setForm({ kind: tab })}><Plus />Agendar Manutenção</Button></PageHeader>
     <Tabs value={tab} onValueChange={v => setTab(v as typeof tab)} className="mb-3"><TabsList><TabsTrigger value="Preventiva">Preventivas ({fleet.data.maintenance.filter(m => m.kind === 'Preventiva').length})</TabsTrigger><TabsTrigger value="Corretiva">Corretivas ({fleet.data.maintenance.filter(m => m.kind === 'Corretiva').length})</TabsTrigger></TabsList></Tabs>
-    <DataTable<Maintenance> key={tab} rows={fleet.data.maintenance.filter(m => m.kind === tab)} noun="manutenções" searchPlaceholder="Pesquisar por placa ou oficina..." rowName={r => `manutenção de ${label(r.vehicle)}`} search={r => `${label(r.vehicle)} ${r.shop}`}
+    <DataTable<Maintenance> key={tab} rows={fleet.data.maintenance.filter(m => m.kind === tab)} noun="manutenções" searchPlaceholder="Pesquisar por placa..." rowName={r => `manutenção de ${label(r.vehicle)}`} search={r => label(r.vehicle)}
       filters={[{ label: 'Status', options: maintenanceStatuses, get: r => r.status }]}
-      columns={[{ head: 'VEÍCULO', cell: r => label(r.vehicle) }, { head: 'OFICINA', cell: r => r.shop }, { head: 'DATA', cell: r => brDate(r.date) }, { head: 'CUSTO (R$)', cell: r => brl(r.cost) }, { head: 'PRÓXIMA REVISÃO', cell: r => /^\d{4}-\d{2}-\d{2}$/.test(r.next) ? brDate(r.next) : r.next || '—' }, { head: 'STATUS', cell: r => <Badge value={r.status} tone={r.status === 'Em Andamento' ? 'blue' : undefined} /> }]}
+      columns={[{ head: 'VEÍCULO', cell: r => label(r.vehicle) }, { head: 'DATA', cell: r => brDate(r.date) }, { head: 'CUSTO (R$)', cell: r => brl(r.cost) }, { head: 'PRÓXIMA REVISÃO', cell: r => /^\d{4}-\d{2}-\d{2}$/.test(r.next) ? brDate(r.next) : r.next || '—' }, { head: 'STATUS', cell: r => <Badge value={r.status} tone={r.status === 'Em Andamento' ? 'blue' : undefined} /> }]}
       onEdit={r => setForm(r)} onDelete={r => fleet.removeRecord('maintenance', r.id)} menu={r => maintenanceStatuses.filter(s => s !== r.status).map(s => ({ label: `Marcar como ${s.toLowerCase()}`, onSelect: () => fleet.saveRecord('maintenance', { ...r, status: s }) }))} />
     {form && <RecordDialog title={form.id ? 'Editar manutenção' : 'Agendar manutenção'} fields={fields} schema={maintenanceSchema} initial={{ status: 'Agendada', ...form }} onClose={() => setForm(null)} onSave={d => fleet.saveRecord('maintenance', { ...(d as Omit<Maintenance, 'id'>), id: form.id ?? crypto.randomUUID() }, 'Manutenção salva com sucesso.')} />}
   </div>;
 }
 
 export function ChecklistPage({ initialAction }: { initialAction?: string | undefined }) {
+  const fleet = useFleet(); if (fleet.session?.role === 'Motorista') return <DriverChecklist />;
+  return <AdminChecklist initialAction={initialAction} />;
+}
+function AdminChecklist({ initialAction }: { initialAction?: string | undefined }) {
   const fleet = useFleet(); const ref = useRefOptions(); const label = (id: string) => vehicleLabel(fleet.vehicles, id);
-  const [details, setDetails] = useState<Checklist | null>(null); const [form, setForm] = useState(!!initialAction); const [items, setItems] = useState<Record<string, boolean>>(() => Object.fromEntries(checklistItems.map(k => [k, true])));
+  const [details, setDetails] = useState<Checklist | null>(null); const [form, setForm] = useState(!!initialAction); const [items, setItems] = useState<Record<string, Condition>>(allGood);
   const fields: Field[] = [{ key: 'date', label: 'Data', type: 'date' }, { key: 'type', label: 'Tipo', options: ['Saída', 'Retorno'] }, { key: 'driver', label: 'Motorista', options: ref.drivers }, { key: 'vehicle', label: 'Veículo', options: ref.vehicles }, { key: 'notes', label: 'Observações', wide: true }];
   return <div className="page-content"><PageHeader title="Checklist" description="Inspeções diárias obrigatórias preenchidas pelos motoristas."><Button className="register-button" onClick={() => setForm(true)}><Plus />Checklist diário</Button></PageHeader>
     <DataTable<Checklist> rows={fleet.data.checklists} noun="checklists" searchPlaceholder="Pesquisar por motorista ou placa..." rowName={r => `checklist de ${r.driver}`} search={r => `${r.driver} ${label(r.vehicle)}`}
@@ -95,10 +101,10 @@ export function ChecklistPage({ initialAction }: { initialAction?: string | unde
       onDelete={r => fleet.removeRecord('checklists', r.id)} menu={r => [{ label: 'Ver detalhes', onSelect: () => setDetails(r) }]} />
     <Sheet open={!!details} onOpenChange={o => !o && setDetails(null)}><SheetContent>{details && <><SheetHeader><SheetTitle>Checklist de {details.type.toLowerCase()}</SheetTitle><SheetDescription>{brDate(details.date)} · {details.driver} · {label(details.vehicle)}</SheetDescription></SheetHeader>
       <div className="mt-4 mb-4"><Badge value={details.status} /></div>
-      <ul className="checklist-items">{checklistItems.map(k => <li key={k}>{details.items[k] ? <Check className="text-[color:var(--green)]" aria-label="OK" /> : <X className="text-destructive" aria-label="Com problema" />}<span>{k}</span><small>{details.items[k] ? 'OK' : 'Com problema'}</small></li>)}</ul>
+      <ul className="checklist-items">{checklistItems.map(k => <li key={k}>{details.items[k] === 'Bom' ? <Check className="text-[color:var(--green)]" aria-label="Bom" /> : <X className={details.items[k] === 'Ruim' ? 'text-destructive' : 'text-[color:var(--amber)]'} aria-label={details.items[k]} />}<span>{k}</span><small>{details.items[k]}</small></li>)}</ul>
       {details.notes && <p className="mt-4 text-sm"><strong>Observações:</strong> {details.notes}</p>}</>}</SheetContent></Sheet>
-    {form && <RecordDialog title="Checklist diário" fields={fields} schema={checklistSchema} initial={{ date: new Date().toISOString().slice(0, 10), type: 'Saída', notes: '' }} onClose={() => setForm(false)} onSave={d => { fleet.saveRecord('checklists', { ...(d as z.infer<typeof checklistSchema>), id: crypto.randomUUID(), items, status: checklistStatus(items) }, `Checklist salvo: ${checklistStatus(items)}.`); setItems(Object.fromEntries(checklistItems.map(k => [k, true]))); }}>
-      <fieldset className="checklist-form"><legend>Itens verificados (desmarque o que tiver problema)</legend>{checklistItems.map(k => <label key={k}><input type="checkbox" checked={items[k] ?? true} onChange={e => setItems({ ...items, [k]: e.target.checked })} />{k}</label>)}</fieldset>
+    {form && <RecordDialog title="Checklist diário" fields={fields} schema={checklistSchema} initial={{ date: new Date().toISOString().slice(0, 10), type: 'Saída', notes: '' }} onClose={() => setForm(false)} onSave={d => { fleet.saveRecord('checklists', { ...(d as z.infer<typeof checklistSchema>), id: crypto.randomUUID(), items, status: checklistStatus(items) }, `Checklist salvo: ${checklistStatus(items)}.`); setItems(allGood()); }}>
+      <fieldset className="checklist-form"><legend>Itens verificados</legend>{checklistItems.map(k => <ConditionPicker key={k} item={k} value={items[k]} onChange={v => setItems({ ...items, [k]: v })} />)}</fieldset>
     </RecordDialog>}
   </div>;
 }
