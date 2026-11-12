@@ -49,7 +49,7 @@ export function DriverChecklist() {
     setItems({}); setF({ vehicle: '', destination: '', departureKm: '', returnKm: '' }); setErrors({}); setMode(activeMode === 'saida' ? 'retorno' : 'saida');
   }
   const input = (key: keyof typeof f, label: string, type = 'text') => <label className="form-field"><span>{label}</span><input aria-label={label} type={type} min={0} maxLength={100} value={f[key]} onChange={e => setF({ ...f, [key]: e.target.value })} />{errors[key] && <small className="text-destructive">{errors[key]}</small>}</label>;
-  return <div className="page-content"><PageHeader title="Checklist" description="Faça a vistoria e registre a movimentação do veículo. Após salvar, os registros não podem ser alterados." />
+  return <div className="page-content"><PageHeader crumb={false} title="Checklist" description="Faça a vistoria e registre a movimentação do veículo. Após salvar, os registros não podem ser alterados." />
     <form noValidate onSubmit={submit} className="driver-checklist">
       <section className="settings-panel"><h2><ClipboardCheck />Checklist Diário</h2><p className="text-sm text-muted-foreground mb-3">Todos os itens são obrigatórios.</p>
         {checklistItems.map(k => <ConditionPicker key={k} item={k} value={items[k]} error={errors[k]} onChange={v => setItems({ ...items, [k]: v })} />)}</section>
@@ -59,7 +59,7 @@ export function DriverChecklist() {
           <button type="button" role="radio" aria-checked={activeMode === 'retorno'} disabled={!openTrip} className={activeMode === 'retorno' ? 'active' : ''} onClick={() => { setMode('retorno'); setErrors({}); }}>Registrar Retorno</button></div>
         {!openTrip && <p className="text-xs text-muted-foreground mb-3">Registrar Retorno fica disponível quando você tiver uma saída em aberto.</p>}
         {activeMode === 'saida' ? <div className="form-grid single">
-          <label className="form-field"><span>Veículo (placa)</span><select aria-label="Veículo (placa)" value={f.vehicle} onChange={e => setF({ ...f, vehicle: e.target.value })}><option value="">Selecione</option>{available.map(v => <option key={v.id} value={v.id}>{v.plate}</option>)}</select>{errors.vehicle && <small className="text-destructive">{errors.vehicle}</small>}</label>
+          <label className="form-field"><span>Veículo (placa)</span><select aria-label="Veículo (placa)" value={f.vehicle} onChange={e => setF({ ...f, vehicle: e.target.value })}><option value="">Selecione</option>{available.map(v => <option key={v.id} value={v.id}>{v.plate}</option>)}</select>{errors['vehicle'] && <small className="text-destructive">{errors['vehicle']}</small>}</label>
           {input('destination', 'Destino')}{input('departureKm', 'Odômetro de saída (km)', 'number')}</div>
           : openTrip && <div className="form-grid single"><p className="text-sm">Viagem em aberto: <strong>{plate(openTrip.vehicle)} → {openTrip.destination}</strong><br /><span className="text-muted-foreground">Odômetro de saída: {openTrip.departureKm.toLocaleString('pt-BR')} km</span></p>
             {input('returnKm', 'Odômetro de entrada (km)', 'number')}</div>}

@@ -64,15 +64,15 @@ export function buildDriverSubmission(i: DriverInput): { trip: Trip; checklist: 
   const km = (v?: string) => (v ?? '').trim() === '' ? NaN : Number(v);
   let trip: Trip | undefined;
   if (i.mode === 'saida') {
-    if (!i.vehicle) errors.vehicle = 'Selecione um veículo.';
-    if ((i.destination ?? '').trim().length < 2) errors.destination = 'Informe o destino.';
-    const d = km(i.departureKm); if (!Number.isFinite(d) || d < 0) errors.departureKm = 'Informe o odômetro de saída.';
+    if (!i.vehicle) errors['vehicle'] = 'Selecione um veículo.';
+    if ((i.destination ?? '').trim().length < 2) errors['destination'] = 'Informe o destino.';
+    const d = km(i.departureKm); if (!Number.isFinite(d) || d < 0) errors['departureKm'] = 'Informe o odômetro de saída.';
     if (!Object.keys(errors).length) trip = { id: i.id, vehicle: i.vehicle!, driver: i.driver, destination: i.destination!.trim(), purpose: 'Rotina do motorista', departureAt: i.now, departureKm: d, status: 'Em Rota' };
-  } else if (!i.openTrip) errors.returnKm = 'Você não tem viagem em aberto.';
+  } else if (!i.openTrip) errors['returnKm'] = 'Você não tem viagem em aberto.';
   else {
     const r = km(i.returnKm);
-    if (!Number.isFinite(r) || r <= i.openTrip.departureKm) errors.returnKm = `O odômetro de entrada deve ser maior que ${i.openTrip.departureKm.toLocaleString('pt-BR')} km.`;
-    else if (!Object.keys(errors).length) { const c = closeTrip(i.openTrip, i.now, r); if (typeof c === 'string') errors.returnKm = c; else trip = c; }
+    if (!Number.isFinite(r) || r <= i.openTrip.departureKm) errors['returnKm'] = `O odômetro de entrada deve ser maior que ${i.openTrip.departureKm.toLocaleString('pt-BR')} km.`;
+    else if (!Object.keys(errors).length) { const c = closeTrip(i.openTrip, i.now, r); if (typeof c === 'string') errors['returnKm'] = c; else trip = c; }
   }
   if (Object.keys(errors).length || !trip) return { errors };
   const items = Object.fromEntries(checklistItems.map(k => [k, i.items[k]!])) as Record<string, Condition>;

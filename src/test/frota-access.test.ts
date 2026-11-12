@@ -2,13 +2,16 @@ import { describe, it, expect } from 'vitest';
 import { homeFor, canAccess, can, settingsSections } from '@/features/frota/access';
 describe('controle de acesso', () => {
   it('motorista vai para o painel próprio e não acessa /usuarios nem /veiculos', () => {
-    expect(homeFor('Motorista')).toBe('/motorista');
+    expect(homeFor('Motorista')).toBe('/checklist');
+    expect(canAccess('Motorista', '/checklist')).toBe(true);
+    expect(canAccess('Motorista', '/')).toBe(false);
+    expect(canAccess('Motorista', '/abastecimentos')).toBe(false);
     expect(canAccess('Motorista', '/usuarios')).toBe(false);
     expect(canAccess('Motorista', '/veiculos')).toBe(false);
   });
   it('gestor não acessa /usuarios e não vê parâmetros de alertas', () => {
     expect(canAccess('Gestor da Frota', '/usuarios')).toBe(false);
-    expect(settingsSections('Gestor da Frota')).toEqual(['perfil', 'oficinas']);
+    expect(settingsSections('Gestor da Frota')).toEqual(['perfil']);
   });
   it('gestor tem CRUD completo em veículos', () => {
     for (const a of ['create', 'read', 'update', 'delete'] as const) expect(can('Gestor da Frota', a, 'veiculos')).toBe(true);

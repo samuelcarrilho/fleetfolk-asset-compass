@@ -49,8 +49,8 @@ export function RowActions({ name, onEdit, onDelete, menu = [] }: { name: string
       <DropdownMenuContent align="end">{onEdit && <DropdownMenuItem onSelect={onEdit}><Pencil />Editar</DropdownMenuItem>}{menu.map(m => <DropdownMenuItem key={m.label} onSelect={m.onSelect}>{m.label}</DropdownMenuItem>)}{onDelete && <DropdownMenuItem className="text-destructive" onSelect={onDelete}><Trash2 />Excluir</DropdownMenuItem>}</DropdownMenuContent></DropdownMenu></div>;
 }
 
-export function PageHeader({ title, description, children }: { title: string; description: string; children?: ReactNode }) {
-  return <><div className="breadcrumb"><Link to="/">Início</Link><ChevronRight /><strong>{title}</strong></div><div className="page-heading"><div><h1>{title}</h1><p>{description}</p></div>{children && <div className="heading-actions">{children}</div>}</div></>;
+export function PageHeader({ title, description, children, crumb = true }: { title: string; description: string; children?: ReactNode; crumb?: boolean }) {
+  return <>{crumb && <div className="breadcrumb"><Link to="/">Início</Link><ChevronRight /><strong>{title}</strong></div>}<div className="page-heading"><div><h1>{title}</h1><p>{description}</p></div>{children && <div className="heading-actions">{children}</div>}</div></>;
 }
 
 export type Column<T> = { head: string; cell: (r: T) => ReactNode };
