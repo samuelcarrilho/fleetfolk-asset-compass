@@ -1,9 +1,10 @@
 # Checklist do Motorista: trava de estado, Finalidade, observações e perfil de auditoria
 
 ## 1. Painel direito reage ao estado do motorista
-- Sem viagem em aberto: mostra só o formulário de **Saída**. A opção Retorno some.
-- Com viagem em aberto: mostra só o formulário de **Retorno**, preso ao veículo em uso. A opção Saída some.
-- Os botões de alternar saem da tela. No lugar entra um título fixo: "Registrar Saída" ou "Registrar Retorno". Depois de salvar, a tela muda sozinha para o próximo estado.
+- Os dois botões, "Registrar Saída" e "Registrar Retorno", ficam sempre visíveis, lado a lado.
+- Sem viagem em aberto: "Registrar Saída" fica ativo e destacado, e o formulário de Saída aparece. "Registrar Retorno" continua visível, mas desativado: acinzentado e sem poder ser clicado.
+- Com viagem em aberto: "Registrar Retorno" fica ativo e destacado, e o formulário de Retorno aparece, fixado no veículo em uso. "Registrar Saída" continua visível, mas desativado.
+- Não dá para alternar à mão. Depois de salvar, a tela muda sozinha para o próximo estado.
 
 ## 2. Saída: campo Finalidade e só veículos disponíveis
 - Novo campo obrigatório **Finalidade**, logo depois de Destino. É uma lista com: Entrega de materiais, Visita técnica, Reunião com cliente, Coleta e Outros.
@@ -34,7 +35,7 @@
   - `DriverInput` ganha `purpose` e `notes`. `buildDriverSubmission` valida a finalidade (só na saída) e as notas (obrigatórias quando algum item não está Bom).
   - `Checklist` ganha `notes?`.
   - O modo vem de `openTrip` e não da escolha do usuário. Se vier `mode: 'saida'` com viagem em aberto, ou `mode: 'retorno'` sem viagem, a função devolve erro.
-- `driver.tsx`: remove o estado `mode` e os botões de alternar. Filtra veículos por `status === 'Disponível'` e por não estarem em rota. Adiciona o select de Finalidade e a textarea condicional.
+- `driver.tsx`: remove o estado `mode`; os botões continuam renderizados com `disabled` derivado de `openTrip` (estilo acinzentado + `cursor-not-allowed` em styles.css). Filtra veículos por `status === 'Disponível'` e por não estarem em rota. Adiciona o select de Finalidade e a textarea condicional.
 - `pages-team.tsx`: o detalhe do checklist mostra `notes`.
 - `store.tsx`: `Admin` ganha `cpf, cnh, cnhCategory, cnhValidity`, preenchidos no `signIn` a partir de `users` e `driverInfo` (com valores de demonstração para Admin e Gestor).
 - `shell.tsx`: o modal lista os novos campos. A sidebar do motorista mostra Configurações.
