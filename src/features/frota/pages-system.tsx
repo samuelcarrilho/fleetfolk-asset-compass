@@ -1,11 +1,11 @@
-import { settingsSections } from './access';
+import { settingsSections, can } from './access';
 import { useState } from 'react';
 import { Fuel, Wrench, TriangleAlert, FileText, Download, Printer, UserRound, BellRing, BookOpen, Mail, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { z } from 'zod';
-import { useFleet, vehicleLabel } from './store';
+import { useFleet, vehicleLabel, profileAudit } from './store';
 import { PageHeader, useRefOptions, brDate, brl, type Field } from './crud';
 import { monthlyFuelReport, toCsv, settingsSchema, dueStatus } from './ops';
 
@@ -57,12 +57,16 @@ function InlineForm<T extends z.ZodTypeAny>({ schema, fields, initial, onSave, b
     <div className="form-buttons"><Button type="submit">{button}</Button></div></form>;
 }
 
+function ReadOnlyGrid({ rows }: { rows: [string, string][] }) {
+  return <div className="form-grid">{rows.map(([l, v]) => <label key={l} className="form-field"><span>{l}</span><input aria-label={l} value={v} readOnly disabled /></label>)}</div>;
+}
+export function auditRows(a: ReturnType<typeof profileAudit>): [string, string][] { return [['CPF', a.cpf], ['Número da CNH', a.cnh], ['Categoria da CNH', a.category], ['Validade da CNH', a.validity.split('-').reverse().join('/')]]; }
 export function SettingsPage() {
   const fleet = useFleet(); const role = fleet.session?.role ?? 'Administrador'; const [section, setSection] = useState<(typeof sections)[number]['id']>('perfil');
   return <div className="page-content"><PageHeader title="Configurações" description="Ajustes do sistema." />
     <div className="settings-layout"><nav className="settings-nav" aria-label="Seções de configurações">{sections.filter(s => settingsSections(role).includes(s.id)).map(s => <button key={s.id} className={section === s.id ? 'active' : ''} onClick={() => setSection(s.id)}><s.icon />{s.label}</button>)}</nav>
       <section className="settings-panel">
-        {section === 'perfil' && <><h2>{role === 'Administrador' ? 'Perfil do Administrador' : 'Meu Perfil'}</h2><InlineForm key="perfil" schema={adminSchema} initial={fleet.admin} fields={[{ key: 'name', label: 'Nome completo' }, { key: 'email', label: 'E-mail' }, { key: 'phone', label: 'Telefone' }]} button="Salvar perfil" onSave={fleet.setAdmin} /></>}
+        {section === 'perfil' && <><h2>{role === 'Administrador' ? 'Perfil do Administrador' : 'Meu Perfil'}</h2>{can(role, 'update', 'perfil') ? <InlineForm key="perfil" schema={adminSchema} initial={fleet.admin} fields={[{ key: 'name', label: 'Nome completo' }, { key: 'email', label: 'E-mail' }, { key: 'phone', label: 'Telefone' }]} button="Salvar perfil" onSave={fleet.setAdmin} /> : <><p className="text-sm text-muted-foreground mb-3">Somente leitura: seus dados são exibidos para conferência.</p><ReadOnlyGrid rows={[['Nome completo', fleet.admin.name], ['E-mail', fleet.admin.email], ['Telefone', fleet.admin.phone]]} /></>}<h3 className="mt-5 mb-2 text-sm font-semibold">Documentos (demonstração)</h3><ReadOnlyGrid rows={auditRows(profileAudit(fleet))} /></>}
         {section === 'alertas' && role === 'Administrador' && <><h2>Parâmetros de Alertas</h2><p className="text-muted-foreground text-sm mb-4">Quantos dias antes do vencimento o sistema deve avisar.</p><InlineForm key="alertas" schema={settingsSchema} initial={fleet.settings} fields={[{ key: 'cnhDays', label: 'Dias para aviso de vencimento da CNH', type: 'number' }, { key: 'docDays', label: 'Dias para aviso de IPVA, licenciamento e seguro', type: 'number' }]} button="Salvar parâmetros" onSave={fleet.setSettings} /></>}
       </section></div>
   </div>;

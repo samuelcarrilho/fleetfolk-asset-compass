@@ -21,5 +21,11 @@ describe('controle de acesso', () => {
     expect(can('Motorista', 'update', 'checklist')).toBe(false);
     expect(can('Motorista', 'delete', 'saidas-retornos')).toBe(false);
   });
+  it('motorista vê só o próprio perfil em configurações, sem editar', () => {
+    expect(canAccess('Motorista', '/configuracoes')).toBe(true);
+    expect(settingsSections('Motorista')).toEqual(['perfil']);
+    expect(can('Motorista', 'update', 'perfil')).toBe(false);
+    expect(can('Gestor da Frota', 'update', 'perfil')).toBe(true);
+  });
   it('administrador acessa /usuarios', () => expect(canAccess('Administrador', '/usuarios')).toBe(true));
 });

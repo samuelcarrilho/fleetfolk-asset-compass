@@ -14,6 +14,7 @@ export const cnhCategories = ['A', 'B', 'AB', 'C', 'D', 'E'] as const;
 export const maintenanceStatuses = ['Agendada', 'Em Andamento', 'Concluída'] as const;
 export const checklistItems = ['Para-brisa', 'Lanternas', 'Faróis', 'Luzes de freio', 'Luzes de ré', 'Condição dos pneus', 'Condições do óleo'] as const;
 export const conditions = ['Bom', 'Com Avaria', 'Ruim'] as const;
+export const purposes = ['Entrega de materiais', 'Visita técnica', 'Reunião com cliente', 'Coleta', 'Outros'] as const;
 export type Condition = (typeof conditions)[number];
 
 export const fuelSchema = z.object({ date, vehicle: vehicleRef, driver: driverRef, station: text('Informe o posto.'), fuel: z.enum(fuelTypes), liters: money, total: money, kmPerL: z.coerce.number().positive('Informe o consumo.').max(100) });
@@ -56,18 +57,24 @@ export function checklistStatus(items: Record<string, Condition>): Checklist['st
   const v = Object.values(items);
   return v.includes('Ruim') ? 'Reprovado' : v.every(x => x === 'Bom') ? 'Aprovado' : 'Com Avarias';
 }
-export type DriverInput = { mode: 'saida' | 'retorno'; id: string; driver: string; now: string; items: Partial<Record<string, Condition>>; vehicle?: string; destination?: string; departureKm?: string; returnKm?: string; openTrip?: Trip | undefined };
+export type DriverInput = { mode: 'saida' | 'retorno'; id: string; driver: string; now: string; items: Partial<Record<string, Condition>>; vehicle?: string; destination?: string; purpose?: string; notes?: string; departureKm?: string; returnKm?: string; openTrip?: Trip | undefined };
 /** Builds the trip + checklist from the driver's single submit, or returns field errors (nothing is saved on error). */
 export function buildDriverSubmission(i: DriverInput): { trip: Trip; checklist: Checklist } | { errors: Record<string, string> } {
   const errors: Record<string, string> = {};
   for (const k of checklistItems) if (!i.items[k]) errors[k] = 'Selecione uma opção.';
+  const damaged = checklistItems.some(k => i.items[k] && i.items[k] !== 'Bom');
+  const notes = damaged ? (i.notes ?? '').trim() : '';
+  if (damaged && notes.length < 3) errors['notes'] = 'Descreva a avaria encontrada.';
+  if (notes.length > 500) errors['notes'] = 'Máximo de 500 caracteres.';
+  if (i.mode === 'saida' && i.openTrip) return { errors: { mode: 'Você já tem uma viagem em aberto. Registre o retorno.' } };
   const km = (v?: string) => (v ?? '').trim() === '' ? NaN : Number(v);
   let trip: Trip | undefined;
   if (i.mode === 'saida') {
     if (!i.vehicle) errors['vehicle'] = 'Selecione um veículo.';
     if ((i.destination ?? '').trim().length < 2) errors['destination'] = 'Informe o destino.';
+    if (!(purposes as readonly string[]).includes(i.purpose ?? '')) errors['purpose'] = 'Selecione a finalidade.';
     const d = km(i.departureKm); if (!Number.isFinite(d) || d < 0) errors['departureKm'] = 'Informe o odômetro de saída.';
-    if (!Object.keys(errors).length) trip = { id: i.id, vehicle: i.vehicle!, driver: i.driver, destination: i.destination!.trim(), purpose: 'Rotina do motorista', departureAt: i.now, departureKm: d, status: 'Em Rota' };
+    if (!Object.keys(errors).length) trip = { id: i.id, vehicle: i.vehicle!, driver: i.driver, destination: i.destination!.trim(), purpose: i.purpose!, departureAt: i.now, departureKm: d, status: 'Em Rota' };
   } else if (!i.openTrip) errors['returnKm'] = 'Você não tem viagem em aberto.';
   else {
     const r = km(i.returnKm);
@@ -76,7 +83,7 @@ export function buildDriverSubmission(i: DriverInput): { trip: Trip; checklist: 
   }
   if (Object.keys(errors).length || !trip) return { errors };
   const items = Object.fromEntries(checklistItems.map(k => [k, i.items[k]!])) as Record<string, Condition>;
-  return { trip, checklist: { id: `${i.id}-c`, date: i.now.slice(0, 10), driver: i.driver, vehicle: trip.vehicle, type: i.mode === 'saida' ? 'Saída' : 'Retorno', notes: '', items, status: checklistStatus(items) } };
+  return { trip, checklist: { id: `${i.id}-c`, date: i.now.slice(0, 10), driver: i.driver, vehicle: trip.vehicle, type: i.mode === 'saida' ? 'Saída' : 'Retorno', notes, items, status: checklistStatus(items) } };
 }
 export function closeTrip(trip: Trip, returnAt: string, returnKm: number): Trip | string {
   if (trip.status !== 'Em Rota') return 'Esta viagem já foi concluída.';

@@ -36,4 +36,9 @@ export function FleetProvider({ children }: { children: ReactNode }) {
   return <Context.Provider value={{ users, vehicles, saveUser, saveVehicle, removeUser: id => { setUsers(old => old.filter(x => x.id !== id)); notify('Usuário excluído com sucesso.'); }, removeVehicle: id => { setVehicles(old => old.filter(x => x.id !== id)); notify('Veículo excluído com sucesso.'); }, data, saveRecord, removeRecord, settings, setSettings: s => { setSettings(s); notify('Parâmetros salvos com sucesso.'); }, admin, setAdmin: a => { setAdmin(a); notify('Perfil atualizado com sucesso.'); }, message, notify, session, ready, signIn, signOut }}>{children}</Context.Provider>;
 }
 export function useFleet() { const s = useContext(Context); if (!s) throw new Error('FleetProvider ausente'); return s; }
+/** Demo audit data (CPF/CNH) for the signed-in profile; fictitious values. */
+export function profileAudit(f: Pick<Store, 'users' | 'data' | 'session'>) {
+  const id = f.session?.userId ?? 'u0'; const u = f.users.find(x => x.id === id); const d = f.data.driverInfo.find(x => x.id === id);
+  return { cpf: u?.cpf ?? '—', cnh: d?.cnh ?? `0${id.replace(/\D/g, '').padStart(2, '0')}48213579`.slice(0, 11), category: d?.category ?? 'B', validity: d?.validity ?? '2028-03-15' };
+}
 export function vehicleLabel(vehicles: Vehicle[], id: string) { const v = vehicles.find(x => x.id === id); return v ? `${v.plate} — ${v.model}` : 'Veículo removido'; }

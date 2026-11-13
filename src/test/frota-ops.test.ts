@@ -39,8 +39,21 @@ describe('FROTATech operational rules', () => {
     expect('errors' in r && r.errors['Faróis']).toBeTruthy();
   });
   it('driver departure creates open trip and Saída checklist', () => {
-    const r = buildDriverSubmission({ mode: 'saida', id: 'a', driver: 'Pedro Santos', now: '2026-11-07T08:00', items: good, vehicle: 'v1', destination: 'Centro', departureKm: '500' });
-    expect(r).toMatchObject({ trip: { status: 'Em Rota', departureKm: 500 }, checklist: { type: 'Saída', status: 'Aprovado' } });
+    const r = buildDriverSubmission({ mode: 'saida', id: 'a', driver: 'Pedro Santos', now: '2026-11-07T08:00', items: good, vehicle: 'v1', destination: 'Centro', purpose: 'Coleta', departureKm: '500' });
+    expect(r).toMatchObject({ trip: { status: 'Em Rota', departureKm: 500, purpose: 'Coleta' }, checklist: { type: 'Saída', status: 'Aprovado' } });
+  });
+  const saida = { mode: 'saida' as const, id: 'a', driver: 'Pedro Santos', now: '2026-11-07T08:00', items: good, vehicle: 'v1', destination: 'Centro', departureKm: '500' };
+  it('driver departure requires a purpose', () => {
+    const r = buildDriverSubmission(saida); expect('errors' in r && r.errors['purpose']).toBeTruthy();
+  });
+  it('damage notes required when any item is not Bom, ignored when all Bom', () => {
+    const bad = { ...good, 'Faróis': 'Ruim' as const };
+    const r = buildDriverSubmission({ ...saida, purpose: 'Coleta', items: bad }); expect('errors' in r && r.errors['notes']).toBeTruthy();
+    expect(buildDriverSubmission({ ...saida, purpose: 'Coleta', items: bad, notes: 'Farol quebrado' })).toMatchObject({ checklist: { notes: 'Farol quebrado', status: 'Reprovado' } });
+    expect(buildDriverSubmission({ ...saida, purpose: 'Coleta', notes: 'x' })).toMatchObject({ checklist: { notes: '' } });
+  });
+  it('departure rejected while a trip is open', () => {
+    expect('errors' in buildDriverSubmission({ ...saida, purpose: 'Coleta', openTrip: open })).toBe(true);
   });
   it('driver return rejects odometer not above departure and closes trip otherwise', () => {
     const base = { mode: 'retorno' as const, id: 'b', driver: 'Pedro Santos', now: '2026-11-07T12:00', items: good, openTrip: open };
