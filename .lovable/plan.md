@@ -1,39 +1,41 @@
-# Refinamentos de UI/UX e lógica (SDD)
+# Polimento de UI/UX: tabelas, menu, checklist, perfil e busca
 
-## 1. Menu lateral
-- Nova ordem: Início, Veículos e Operações (Veículos, Abastecimentos, Documentos, Multas), Usuários, Motoristas, Saídas e Retornos, Manutenções, Checklist, **Relatórios**, Configurações, Ajuda.
-- Seta do grupo afastada da borda direita.
-- Abertura/fechamento do grupo com animação suave (~0,3s).
-- Itens filhos com recuo maior e linha fina à esquerda, mostrando que pertencem ao grupo.
+## 1. Tabelas com o mesmo alinhamento de Abastecimentos
+- Checklist, Documentos, Multas, Usuários, Motoristas, Saídas e Retornos e Manutenções passam a usar as mesmas larguras de coluna, alinhamento e espaçamento interno da tabela de Abastecimentos.
 
-## 2. Pesquisa global
-- Ao apertar Enter, abre Veículos já filtrado pelo texto (endereço com `?search=...`), voltando para a página 1.
-- Se o texto for exatamente uma placa existente, abre direto a janela de detalhes/edição daquele veículo.
-- As sugestões da lista suspensa também passam a abrir a tabela filtrada (veículo ou usuário), não a tela genérica.
+## 2. Submenu "Veículos e Operações"
+- Seta logo depois do texto, longe da margem direita.
+- Abertura e fechamento com animação suave (cerca de 0,3s).
+- Linha vertical fina à esquerda dos itens filhos, indicando que pertencem ao grupo.
 
-## 3. Rodapé das tabelas
-- Um único rodapé de paginação para todas as telas: "Mostrando X a Y de Z" à esquerda, controles de página à direita.
-- Aplicado em Checklist, Veículos, Documentos, Multas, Usuários, Motoristas, Saídas e Retornos e Manutenções.
+## 3. Checklist do motorista empilhado
+- Uma coluna só: "Checklist Diário" no topo em largura total e "Registro de Viagem" (Saída/Retorno) logo abaixo, também em largura total.
+- Mantidos os botões Saída/Retorno com a trava (o que não se aplica fica acinzentado) e o único botão Salvar no final.
 
-## 4. Cartões de resumo (mesmo padrão de Veículos), calculados dos dados
-- **Motoristas:** Total, Ativos, Em Viagem, CNHs Próximas do Vencimento (usa os dias de aviso de Configurações).
-- **Manutenções:** Total no Mês, Em Andamento, Concluídas.
-- **Saídas e Retornos:** Veículos em Rota, Retornos Pendentes, Concluídas.
-- **Multas:** Pendentes, Valor Total, Recorridas.
-- Clicar num cartão aplica o filtro correspondente na tabela, como em Veículos.
+## 4. CPF e CNH só para Motorista
+- Em "Meu perfil" e em Configurações > Perfil, CPF, Número, Categoria e Validade da CNH aparecem apenas para Motorista.
+- Administrador e Gestor não veem esses campos.
 
-## 5. Checklist do motorista
-- Linha de cima: Checklist Diário em largura total.
-- Linha de baixo: duas colunas iguais — Saída à esquerda, Retorno à direita.
-- A trava continua: só o formulário que se aplica fica ativo; o outro aparece acinzentado e bloqueado. Continua um único botão Salvar no final.
-- Em celular, as colunas ficam uma embaixo da outra.
+## 5. Cartões de resumo no topo (padrão de Veículos)
+- **Abastecimentos:** Total de abastecimentos, Litros no mês, Valor total, Consumo acima da média.
+- **Multas:** Total, Pendentes, Valor total, Recorridas.
+- **Motoristas:** Total, Ativos, Em viagem, CNHs a vencer.
+- **Saídas e Retornos:** Total de viagens, Em rota, Concluídas, Km rodados.
+- **Manutenções:** Total, Agendadas, Em andamento, Concluídas.
+- Os números saem dos dados de demonstração, então mudam junto quando você cadastra ou exclui algo.
 
-## 6. Meu Perfil
-- Número, Categoria e Validade da CNH aparecem só para Motorista (em "Meu perfil" e em Configurações > Perfil).
-- Administrador e Gestor veem dados pessoais até o CPF.
+## 6. Relatórios no fim do menu
+- Ordem: Início, Veículos e Operações, Usuários, Motoristas, Saídas e Retornos, Manutenções, Checklist, **Relatórios**, depois Configurações e Ajuda.
+
+## 7. Busca global
+- Pesquisar uma placa (Enter ou clique na sugestão) abre Veículos já filtrado por ela, na página 1, mostrando o veículo na hora.
+- O mesmo vale para usuários na tela Usuários (apenas Administrador).
 
 ## Detalhes técnicos
-- `shell.tsx`: reordenar `restItems`; grupo renderizado sempre com wrapper `grid-template-rows 0fr→1fr` (ou max-height) e transição; classes CSS em `styles.css`.
-- `/veiculos` e `/usuarios`: `validateSearch` com `search` (fallback ""); `Listings` inicializa/sincroniza a busca a partir do parâmetro; placa exata abre `RecordForm` do registro.
-- `Pagination` em `ui.tsx` passa a ser o único rodapé; `DataTable` em `crud.tsx` reutiliza-o; CSS flex `space-between`.
-- Funções puras para os contadores dos novos cartões em `ops.ts`, com testes vitest; teste de rota para a nova ordem do menu e para a exibição condicional da CNH.
+- Tabelas: classes de coluna compartilhadas em `styles.css` copiadas do padrão de `.data-table` de Abastecimentos, aplicadas em `DataTable` (`crud.tsx`) e nas tabelas de `pages-team.tsx`/`listings.tsx`.
+- Submenu: wrapper sempre renderizado com `grid-template-rows 0fr→1fr` + transição; chevron sem `margin-left:auto`; `border-left` com token de borda da sidebar.
+- Checklist: grid de uma coluna no layout do `driver.tsx`.
+- Perfil: condição `role === 'Motorista'` no modal do `shell.tsx` e em `SettingsPage`.
+- Cartões: reutilizar `Stat` de `listings.tsx`; contadores em funções puras de `ops.ts` com testes vitest.
+- Menu: reordenar `restItems` no `shell.tsx`; atualizar a regra de ordem na memória do projeto.
+- Busca: `validateSearch` com `search` (fallback "") em `/veiculos` e `/usuarios`; `Listings` lê o parâmetro e reinicia a página.
