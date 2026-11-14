@@ -1,17 +1,18 @@
 import { useState } from 'react';
-import { FileText, CheckCircle, Clock, XCircle, Plus } from 'lucide-react';
+import { FileText, CheckCircle, Clock, XCircle, Plus, Fuel as FuelIcon, Droplet, Wallet, TrendingDown, TriangleAlert, Scale } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFleet, vehicleLabel } from './store';
 import { Badge } from './ui';
 import { Stat } from './listings';
 import { DataTable, PageHeader, RecordDialog, useRefOptions, brDate, brl, type Field } from './crud';
-import { fuelSchema, documentSchema, fineSchema, fuelTypes, docTypes, fineStatuses, fleetAverage, consumptionTone, dueStatus, type Fuel, type Doc, type Fine } from './ops';
+import { fuelSchema, documentSchema, fineSchema, fuelTypes, docTypes, fineStatuses, fleetAverage, consumptionTone, fuelSummary, fineSummary, dueStatus, type Fuel, type Doc, type Fine } from './ops';
 
 export function FuelPage({ initialAction }: { initialAction?: string | undefined }) {
   const fleet = useFleet(); const ref = useRefOptions(); const [form, setForm] = useState<Partial<Fuel> | null>(initialAction ? {} : null);
   const avg = fleetAverage(fleet.data.fuel); const label = (id: string) => vehicleLabel(fleet.vehicles, id);
   const fields: Field[] = [{ key: 'date', label: 'Data', type: 'date' }, { key: 'vehicle', label: 'Veículo', options: ref.vehicles }, { key: 'driver', label: 'Motorista', options: ref.drivers }, { key: 'station', label: 'Posto' }, { key: 'fuel', label: 'Tipo de combustível', options: fuelTypes }, { key: 'liters', label: 'Litros', type: 'number' }, { key: 'total', label: 'Valor total (R$)', type: 'number' }, { key: 'kmPerL', label: 'Consumo médio (km/l)', type: 'number' }];
   return <div className="page-content"><PageHeader title="Abastecimentos" description={`Registre e monitore o consumo de combustível. Média da frota: ${avg.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km/l.`}><Button className="register-button" onClick={() => setForm({})}><Plus />Registrar Abastecimento</Button></PageHeader>
+    {(() => { const s = fuelSummary(fleet.data.fuel, new Date().toISOString().slice(0, 7)); return <div className="stats-grid"><Stat icon={FuelIcon} label="Total de Abastecimentos" count={s.total} /><Stat icon={Droplet} label="Litros no Mês" tone="green" count={Math.round(s.litersMonth)} detail="litros abastecidos" /><Stat icon={Wallet} label="Valor Total" tone="amber" count={Math.round(s.spent)} detail={brl(s.spent)} /><Stat icon={TrendingDown} label="Consumo Acima da Média" tone="red" count={s.high} detail="registros" /></div>; })()}
     <DataTable<Fuel> rows={fleet.data.fuel} noun="abastecimentos" searchPlaceholder="Pesquisar por placa, motorista ou posto..." rowName={r => `abastecimento de ${brDate(r.date)}`} search={r => `${label(r.vehicle)} ${r.driver} ${r.station}`}
       filters={[{ label: 'Combustível', options: fuelTypes, get: r => r.fuel }, { label: 'Motorista', options: ref.drivers, get: r => r.driver }]}
       columns={[{ head: 'DATA', cell: r => brDate(r.date) }, { head: 'VEÍCULO', cell: r => label(r.vehicle) }, { head: 'MOTORISTA', cell: r => r.driver }, { head: 'POSTO', cell: r => r.station }, { head: 'COMBUSTÍVEL', cell: r => r.fuel }, { head: 'LITROS', cell: r => `${r.liters.toLocaleString('pt-BR')} L` }, { head: 'VALOR TOTAL', cell: r => brl(r.total) },
@@ -40,6 +41,7 @@ export function FinesPage() {
   const fleet = useFleet(); const ref = useRefOptions(); const [form, setForm] = useState<Partial<Fine> | null>(null); const label = (id: string) => vehicleLabel(fleet.vehicles, id);
   const fields: Field[] = [{ key: 'date', label: 'Data da infração', type: 'date' }, { key: 'vehicle', label: 'Veículo', options: ref.vehicles }, { key: 'driver', label: 'Motorista responsável', options: ref.drivers }, { key: 'amount', label: 'Valor (R$)', type: 'number' }, { key: 'description', label: 'Infração', wide: true }, { key: 'status', label: 'Status', options: fineStatuses }];
   return <div className="page-content"><PageHeader title="Multas" description="Registre as infrações vinculadas aos condutores."><Button className="register-button" onClick={() => setForm({})}><Plus />Registrar Multa</Button></PageHeader>
+    {(() => { const s = fineSummary(fleet.data.fines); return <div className="stats-grid"><Stat icon={TriangleAlert} label="Total de Multas" count={s.total} /><Stat icon={Clock} label="Pendentes" tone="amber" count={s.pending} /><Stat icon={Wallet} label="Valor Total" tone="red" count={Math.round(s.amount)} detail={brl(s.amount)} /><Stat icon={Scale} label="Recorridas" tone="purple" count={s.appealed} /></div>; })()}
     <DataTable<Fine> rows={fleet.data.fines} noun="multas" searchPlaceholder="Pesquisar por infração, placa ou motorista..." rowName={r => `multa de ${brDate(r.date)}`} search={r => `${label(r.vehicle)} ${r.driver} ${r.description}`}
       filters={[{ label: 'Motorista', options: ref.drivers, get: r => r.driver }, { label: 'Veículo', options: [...new Set(fleet.data.fines.map(f => label(f.vehicle)))], get: r => label(r.vehicle) }, { label: 'Status', options: fineStatuses, get: r => r.status }]}
       columns={[{ head: 'DATA DA INFRAÇÃO', cell: r => brDate(r.date) }, { head: 'VEÍCULO', cell: r => label(r.vehicle) }, { head: 'MOTORISTA RESPONSÁVEL', cell: r => <><div>{r.driver}</div><small className="text-muted-foreground">{r.description}</small></> }, { head: 'VALOR (R$)', cell: r => brl(r.amount) }, { head: 'STATUS', cell: r => <Badge value={r.status} /> }]}

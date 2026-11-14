@@ -61,3 +61,18 @@ describe('FROTATech operational rules', () => {
     expect(buildDriverSubmission({ ...base, returnKm: '1100' })).toMatchObject({ trip: { status: 'Concluída', returnKm: 1100 }, checklist: { type: 'Retorno' } });
   });
 });
+
+import { fineSummary, tripSummary, maintenanceSummary } from '@/features/frota/ops';
+describe('resumos dos cartões', () => {
+  it('soma multas pendentes, recorridas e valor', () => {
+    const s = fineSummary([{ id: '1', date: '2026-01-01', vehicle: 'v0', driver: 'A', description: 'x', amount: 100, status: 'Pendente' }, { id: '2', date: '2026-01-01', vehicle: 'v0', driver: 'A', description: 'x', amount: 50, status: 'Recorrida' }]);
+    expect(s).toEqual({ total: 2, pending: 1, amount: 150, appealed: 1 });
+  });
+  it('conta viagens em rota e km rodados só das concluídas', () => {
+    const s = tripSummary([{ id: '1', vehicle: 'v0', driver: 'A', destination: 'x', purpose: 'Coleta', departureAt: '', departureKm: 100, status: 'Em Rota' }, { id: '2', vehicle: 'v0', driver: 'A', destination: 'x', purpose: 'Coleta', departureAt: '', departureKm: 100, returnKm: 180, status: 'Concluída' }] as never);
+    expect(s).toEqual({ total: 2, open: 1, done: 1, km: 80 });
+  });
+  it('conta manutenções por status', () => {
+    expect(maintenanceSummary([{ status: 'Agendada' }, { status: 'Concluída' }, { status: 'Concluída' }] as never)).toEqual({ total: 3, scheduled: 1, running: 0, done: 2 });
+  });
+});

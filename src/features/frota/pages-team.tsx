@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, CirclePlay, CircleStop, Check, X } from 'lucide-react';
+import { Plus, CirclePlay, CircleStop, Check, X, Users, UserCheck, Route as RouteIcon, IdCard, CheckCircle, Gauge, Wrench, CalendarClock, Hammer } from 'lucide-react';
+import { Stat } from './listings';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,7 +11,7 @@ import { DriverChecklist, ConditionPicker } from './driver';
 const allGood = () => Object.fromEntries(checklistItems.map(k => [k, 'Bom'])) as Record<string, Condition>;
 import { userSchema, type User } from './data';
 import { DataTable, PageHeader, RecordDialog, useRefOptions, brDate, brl, type Field } from './crud';
-import { driverInfoSchema, cnhCategories, cnhAlert, tripSchema, closeTrip, maintenanceSchema, maintenanceStatuses, checklistSchema, checklistItems, checklistStatus, type Condition, type DriverInfo, type Trip, type Maintenance, type Checklist } from './ops';
+import { driverInfoSchema, cnhCategories, cnhAlert, tripSchema, closeTrip, maintenanceSchema, maintenanceStatuses, checklistSchema, checklistItems, checklistStatus, tripSummary, maintenanceSummary, type Condition, type DriverInfo, type Trip, type Maintenance, type Checklist } from './ops';
 
 const driverSchema = userSchema.omit({ profile: true }).merge(driverInfoSchema);
 type DriverRow = User & Partial<DriverInfo>;
@@ -32,6 +33,7 @@ export function DriversPage() {
   const rows: DriverRow[] = fleet.users.filter(u => u.profile === 'Motorista').map(u => ({ ...u, ...fleet.data.driverInfo.find(d => d.id === u.id) }));
   const alert = (r: DriverRow) => r.validity ? cnhAlert(r.validity, days) : 'Sem CNH';
   return <div className="page-content"><PageHeader title="Motoristas" description={`Visão detalhada dos condutores da frota. Alerta de CNH ${days} dias antes do vencimento.`}><Button className="register-button" onClick={() => setForm({})}><Plus />Cadastrar Motorista</Button></PageHeader>
+    <div className="stats-grid"><Stat icon={Users} label="Total de Motoristas" count={rows.length} /><Stat icon={UserCheck} label="Ativos" tone="green" count={rows.filter(r => r.status === 'Ativo').length} /><Stat icon={RouteIcon} label="Em Viagem" tone="purple" count={new Set(fleet.data.trips.filter(t => t.status === 'Em Rota').map(t => t.driver)).size} /><Stat icon={IdCard} label="CNHs a Vencer" tone="amber" count={rows.filter(r => alert(r) !== 'Válida').length} detail={`até ${days} dias ou vencidas`} /></div>
     <DataTable<DriverRow> rows={rows} noun="motoristas" searchPlaceholder="Pesquisar por nome, CPF ou CNH..." rowName={r => r.name} search={r => `${r.name} ${r.cpf} ${r.cnh ?? ''}`}
       filters={[{ label: 'Categoria', options: cnhCategories, get: r => r.category ?? '' }, { label: 'Validade', options: ['Válida', 'Vence em breve', 'Vencida'], get: alert }, { label: 'Status', options: ['Ativo', 'Inativo'], get: r => r.status }]}
       columns={[{ head: 'NOME', cell: r => <div className="name-content"><span className="avatar">{r.name.split(' ').map(n => n[0]).slice(0, 2).join('')}</span>{r.name}</div> }, { head: 'CPF', cell: r => r.cpf }, { head: 'CNH', cell: r => r.cnh ?? '—' }, { head: 'CATEGORIA DA CNH', cell: r => r.category ?? '—' },
@@ -51,6 +53,7 @@ export function TripsPage({ initialAction }: { initialAction?: string | undefine
   const open = fleet.data.trips.filter(t => t.status === 'Em Rota');
   const fields: Field[] = [{ key: 'vehicle', label: 'Veículo', options: ref.vehicles }, { key: 'driver', label: 'Motorista', options: ref.drivers }, { key: 'destination', label: 'Destino' }, { key: 'purpose', label: 'Finalidade' }, { key: 'departureAt', label: 'Saída (data e hora)', type: 'datetime-local' }, { key: 'departureKm', label: 'Km de saída', type: 'number' }];
   return <div className="page-content"><PageHeader title="Saídas e Retornos" description={`Controle de viagens e deslocamentos. ${open.length} veículo(s) em rota agora.`}><Button className="register-button" onClick={() => setForm({})}><CirclePlay />Registrar Saída</Button><Button className="register-button" variant="outline" disabled={!open.length} onClick={() => setRet('')}><CircleStop />Registrar Retorno</Button></PageHeader>
+    {(() => { const s = tripSummary(fleet.data.trips); return <div className="stats-grid"><Stat icon={RouteIcon} label="Total de Viagens" count={s.total} /><Stat icon={CirclePlay} label="Em Rota" tone="amber" count={s.open} detail="retornos pendentes" /><Stat icon={CheckCircle} label="Concluídas" tone="green" count={s.done} /><Stat icon={Gauge} label="Km Rodados" tone="purple" count={s.km} detail="viagens concluídas" /></div>; })()}
     <DataTable<Trip> rows={[...fleet.data.trips].sort((a, b) => b.departureAt.localeCompare(a.departureAt))} noun="movimentações" searchPlaceholder="Pesquisar por placa, motorista ou destino..." rowName={r => `viagem para ${r.destination}`} search={r => `${label(r.vehicle)} ${r.driver} ${r.destination} ${r.purpose}`}
       filters={[{ label: 'Status', options: ['Em Rota', 'Concluída'], get: r => r.status }, { label: 'Motorista', options: ref.drivers, get: r => r.driver }]}
       columns={[{ head: 'VEÍCULO', cell: r => label(r.vehicle) }, { head: 'MOTORISTA', cell: r => r.driver }, { head: 'DESTINO', cell: r => r.destination }, { head: 'FINALIDADE', cell: r => r.purpose }, { head: 'SAÍDA', cell: r => <><div>{brDate(r.departureAt)}</div><small className="text-muted-foreground">{r.departureKm.toLocaleString('pt-BR')} km</small></> }, { head: 'RETORNO', cell: r => r.returnAt ? <><div>{brDate(r.returnAt)}</div><small className="text-muted-foreground">{r.returnKm?.toLocaleString('pt-BR')} km</small></> : '—' }, { head: 'STATUS', cell: r => <Badge value={r.status} tone={r.status === 'Em Rota' ? 'blue' : 'green'} /> }]}
@@ -77,6 +80,7 @@ export function MaintenancePage() {
   const fleet = useFleet(); const ref = useRefOptions(); const [tab, setTab] = useState<'Preventiva' | 'Corretiva'>('Preventiva'); const [form, setForm] = useState<Partial<Maintenance> | null>(null); const label = (id: string) => vehicleLabel(fleet.vehicles, id);
   const fields: Field[] = [{ key: 'kind', label: 'Tipo', options: ['Preventiva', 'Corretiva'] }, { key: 'vehicle', label: 'Veículo', options: ref.vehicles }, { key: 'date', label: 'Data', type: 'date' }, { key: 'cost', label: 'Custo (R$)', type: 'number' }, { key: 'next', label: 'Próxima revisão (km ou data)' }, { key: 'status', label: 'Status', options: maintenanceStatuses }];
   return <div className="page-content"><PageHeader title="Manutenções" description="Gestão de revisões preventivas e consertos."><Button className="register-button" onClick={() => setForm({ kind: tab })}><Plus />Agendar Manutenção</Button></PageHeader>
+    {(() => { const s = maintenanceSummary(fleet.data.maintenance); return <div className="stats-grid"><Stat icon={Wrench} label="Total de Manutenções" count={s.total} /><Stat icon={CalendarClock} label="Agendadas" tone="purple" count={s.scheduled} /><Stat icon={Hammer} label="Em Andamento" tone="amber" count={s.running} /><Stat icon={CheckCircle} label="Concluídas" tone="green" count={s.done} /></div>; })()}
     <Tabs value={tab} onValueChange={v => setTab(v as typeof tab)} className="mb-3"><TabsList><TabsTrigger value="Preventiva">Preventivas ({fleet.data.maintenance.filter(m => m.kind === 'Preventiva').length})</TabsTrigger><TabsTrigger value="Corretiva">Corretivas ({fleet.data.maintenance.filter(m => m.kind === 'Corretiva').length})</TabsTrigger></TabsList></Tabs>
     <DataTable<Maintenance> key={tab} rows={fleet.data.maintenance.filter(m => m.kind === tab)} noun="manutenções" searchPlaceholder="Pesquisar por placa..." rowName={r => `manutenção de ${label(r.vehicle)}`} search={r => label(r.vehicle)}
       filters={[{ label: 'Status', options: maintenanceStatuses, get: r => r.status }]}

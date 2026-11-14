@@ -111,3 +111,19 @@ export const initialTrips: Trip[] = Array.from({ length: 9 }, (_, i) => { const 
 export const initialMaintenance: Maintenance[] = Array.from({ length: 10 }, (_, i) => ({ id: `r${i}`, kind: i % 3 === 2 ? 'Corretiva' : 'Preventiva', vehicle: `v${(i * 5) % 8}`, date: `2026-${i < 4 ? '11' : '10'}-${String(5 + i * 2).padStart(2, '0')}`, cost: pick([450, 1280, 320.5, 2150, 780], i), next: i % 3 === 2 ? '' : i % 2 ? '2027-05-10' : `${60000 + i * 5000} km`, status: pick(maintenanceStatuses, i) }));
 export const initialChecklists: Checklist[] = Array.from({ length: 9 }, (_, i) => { const items = Object.fromEntries(checklistItems.map((k, j) => [k, i % 4 === 1 && j === 5 ? 'Com Avaria' : i % 4 === 3 && j < 2 ? 'Ruim' : 'Bom'])) as Record<string, Condition>; return { id: `c${i}`, date: `2026-11-${String(7 - (i % 5)).padStart(2, '0')}`, driver: pick(drivers, i), vehicle: `v${i % 8}`, type: i % 2 ? 'Retorno' : 'Saída', notes: i % 4 === 1 ? 'Pneu dianteiro com desgaste.' : '', items, status: checklistStatus(items) }; });
 export const defaultSettings: Settings = { cnhDays: 30, docDays: 30 };
+
+/** Summary counters for the KPI cards on the operational list screens. */
+export function fuelSummary(rows: Fuel[], month: string) {
+  const avg = fleetAverage(rows); const inMonth = rows.filter(r => r.date.startsWith(month));
+  return { total: rows.length, litersMonth: inMonth.reduce((s, r) => s + r.liters, 0), spent: rows.reduce((s, r) => s + r.total, 0), high: rows.filter(r => consumptionTone(r.kmPerL, avg) === 'red').length };
+}
+export function fineSummary(rows: Fine[]) {
+  return { total: rows.length, pending: rows.filter(r => r.status === 'Pendente').length, amount: rows.reduce((s, r) => s + r.amount, 0), appealed: rows.filter(r => r.status === 'Recorrida').length };
+}
+export function tripSummary(rows: Trip[]) {
+  return { total: rows.length, open: rows.filter(r => r.status === 'Em Rota').length, done: rows.filter(r => r.status === 'Concluída').length, km: rows.reduce((s, r) => s + (r.returnKm != null ? r.returnKm - r.departureKm : 0), 0) };
+}
+export function maintenanceSummary(rows: Maintenance[]) {
+  const n = (s: string) => rows.filter(r => r.status === s).length;
+  return { total: rows.length, scheduled: n('Agendada'), running: n('Em Andamento'), done: n('Concluída') };
+}
