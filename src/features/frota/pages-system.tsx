@@ -1,4 +1,4 @@
-import { settingsSections, can } from './access';
+import { settingsSections, can, profileDocumentFields, type Role } from './access';
 import { useState } from 'react';
 import { Fuel, Wrench, TriangleAlert, FileText, Download, Printer, UserRound, BellRing, BookOpen, Mail, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -50,23 +50,27 @@ export function ReportsPage() {
 const adminSchema = z.object({ name: z.string().trim().min(3, 'Informe o nome completo.').max(100), email: z.string().trim().email('Informe um e-mail válido.').max(255), phone: z.string().trim().min(10, 'Informe um telefone válido.').max(20) });
 const sections = [{ id: 'perfil', label: 'Perfil', icon: UserRound }, { id: 'alertas', label: 'Parâmetros de Alertas', icon: BellRing }] as const;
 
-function InlineForm<T extends z.ZodTypeAny>({ schema, fields, initial, onSave, button }: { schema: T; fields: Field[]; initial: Record<string, unknown>; onSave: (d: z.infer<T>) => void; button: string }) {
+function InlineForm<T extends z.ZodTypeAny>({ schema, fields, initial, onSave, button, readOnlyRows = [] }: { schema: T; fields: Field[]; initial: Record<string, unknown>; onSave: (d: z.infer<T>) => void; button: string; readOnlyRows?: [string, string][] }) {
   const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(fields.map(f => [f.key, String(initial[f.key] ?? '')]))); const [errors, setErrors] = useState<Record<string, string>>({});
   return <form noValidate onSubmit={e => { e.preventDefault(); const p = schema.safeParse(values); if (!p.success) { setErrors(Object.fromEntries(p.error.issues.map(i => [String(i.path[0]), i.message]))); return; } setErrors({}); onSave(p.data); }}>
     <div className="form-grid">{fields.map(f => <label key={f.key} className="form-field"><span>{f.label}</span><input aria-label={f.label} type={f.type ?? 'text'} maxLength={200} value={values[f.key]} onChange={e => setValues({ ...values, [f.key]: e.target.value })} />{errors[f.key] && <small className="text-destructive">{errors[f.key]}</small>}</label>)}</div>
+    {readOnlyRows.length > 0 && <div className="mt-4"><ReadOnlyGrid rows={readOnlyRows} /></div>}
     <div className="form-buttons"><Button type="submit">{button}</Button></div></form>;
 }
 
 function ReadOnlyGrid({ rows }: { rows: [string, string][] }) {
   return <div className="form-grid">{rows.map(([l, v]) => <label key={l} className="form-field"><span>{l}</span><input aria-label={l} value={v} readOnly disabled /></label>)}</div>;
 }
-export function auditRows(a: ReturnType<typeof profileAudit>): [string, string][] { return [['CPF', a.cpf], ['Número da CNH', a.cnh], ['Categoria da CNH', a.category], ['Validade da CNH', a.validity.split('-').reverse().join('/')]]; }
+export function auditRows(a: ReturnType<typeof profileAudit>, role: Role): [string, string][] {
+  const labels = { cpf: 'CPF', cnh: 'Número da CNH', category: 'Categoria da CNH', validity: 'Validade da CNH' };
+  return profileDocumentFields(role).map(key => [labels[key], key === 'validity' ? a.validity.split('-').reverse().join('/') : a[key]]);
+}
 export function SettingsPage() {
   const fleet = useFleet(); const role = fleet.session?.role ?? 'Administrador'; const [section, setSection] = useState<(typeof sections)[number]['id']>('perfil');
   return <div className="page-content"><PageHeader title="Configurações" description="Ajustes do sistema." />
     <div className="settings-layout"><nav className="settings-nav" aria-label="Seções de configurações">{sections.filter(s => settingsSections(role).includes(s.id)).map(s => <button key={s.id} className={section === s.id ? 'active' : ''} onClick={() => setSection(s.id)}><s.icon />{s.label}</button>)}</nav>
       <section className="settings-panel">
-        {section === 'perfil' && <><h2>{role === 'Administrador' ? 'Perfil do Administrador' : 'Meu Perfil'}</h2>{can(role, 'update', 'perfil') ? <InlineForm key="perfil" schema={adminSchema} initial={fleet.admin} fields={[{ key: 'name', label: 'Nome completo' }, { key: 'email', label: 'E-mail' }, { key: 'phone', label: 'Telefone' }]} button="Salvar perfil" onSave={fleet.setAdmin} /> : <><p className="text-sm text-muted-foreground mb-3">Somente leitura: seus dados são exibidos para conferência.</p><ReadOnlyGrid rows={[['Nome completo', fleet.admin.name], ['E-mail', fleet.admin.email], ['Telefone', fleet.admin.phone]]} /></>}{role === 'Motorista' && <><h3 className="mt-5 mb-2 text-sm font-semibold">Documentos (demonstração)</h3><ReadOnlyGrid rows={auditRows(profileAudit(fleet))} /></>}</>}
+        {section === 'perfil' && <><h2>{role === 'Administrador' ? 'Perfil do Administrador' : 'Meu Perfil'}</h2>{can(role, 'update', 'perfil') ? <InlineForm key="perfil" schema={adminSchema} initial={fleet.admin} fields={[{ key: 'name', label: 'Nome completo' }, { key: 'email', label: 'E-mail' }, { key: 'phone', label: 'Telefone' }]} button="Salvar perfil" readOnlyRows={auditRows(profileAudit(fleet), role)} onSave={fleet.setAdmin} /> : <><p className="text-sm text-muted-foreground mb-3">Somente leitura: seus dados são exibidos para conferência.</p><ReadOnlyGrid rows={[['Nome completo', fleet.admin.name], ['E-mail', fleet.admin.email], ['Telefone', fleet.admin.phone]]} /></>}{role === 'Motorista' && <><h3 className="mt-5 mb-2 text-sm font-semibold">Documentos (demonstração)</h3><ReadOnlyGrid rows={auditRows(profileAudit(fleet), role)} /></>}</>}
         {section === 'alertas' && role === 'Administrador' && <><h2>Parâmetros de Alertas</h2><p className="text-muted-foreground text-sm mb-4">Quantos dias antes do vencimento o sistema deve avisar.</p><InlineForm key="alertas" schema={settingsSchema} initial={fleet.settings} fields={[{ key: 'cnhDays', label: 'Dias para aviso de vencimento da CNH', type: 'number' }, { key: 'docDays', label: 'Dias para aviso de IPVA, licenciamento e seguro', type: 'number' }]} button="Salvar parâmetros" onSave={fleet.setSettings} /></>}
       </section></div>
   </div>;

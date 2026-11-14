@@ -13,3 +13,4 @@
 - Use src/features/frota for shared application UI and distinct TanStack leaf routes for each navigation item; this preserves the reference shell and makes unavailable modules explicit.
 - Keep visual styling and semantic colors in src/styles.css; this centralizes fidelity adjustments across all reference screens.
 - Access is decided only by src/features/frota/access.ts (routeAccess/can/settingsSections); one table keeps menu, guards and buttons in sync. Simulated, client-only. Motorista sees only /checklist and a read-only Configurações > Perfil; /checklist is a combined checklist+trip form whose single submit writes to the separate trips and checklists collections.
+- Use profileDocumentFields in access.ts for document visibility in both profile views; one role-based rule prevents divergent CPF/CNH displays.

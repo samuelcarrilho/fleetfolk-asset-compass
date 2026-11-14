@@ -14,7 +14,7 @@ export const cnhCategories = ['A', 'B', 'AB', 'C', 'D', 'E'] as const;
 export const maintenanceStatuses = ['Agendada', 'Em Andamento', 'Concluída'] as const;
 export const checklistItems = ['Para-brisa', 'Lanternas', 'Faróis', 'Luzes de freio', 'Luzes de ré', 'Condição dos pneus', 'Condições do óleo'] as const;
 export const conditions = ['Bom', 'Com Avaria', 'Ruim'] as const;
-export const purposes = ['Entrega de materiais', 'Visita técnica', 'Reunião com cliente', 'Coleta', 'Outros'] as const;
+export const purposes = ['Entrega de materiais', 'Visita técnica', 'Reunião com cliente', 'Coleta', 'Rotina de Motorista'] as const;
 export type Condition = (typeof conditions)[number];
 
 export const fuelSchema = z.object({ date, vehicle: vehicleRef, driver: driverRef, station: text('Informe o posto.'), fuel: z.enum(fuelTypes), liters: money, total: money, kmPerL: z.coerce.number().positive('Informe o consumo.').max(100) });
@@ -126,4 +126,7 @@ export function tripSummary(rows: Trip[]) {
 export function maintenanceSummary(rows: Maintenance[]) {
   const n = (s: string) => rows.filter(r => r.status === s).length;
   return { total: rows.length, scheduled: n('Agendada'), running: n('Em Andamento'), done: n('Concluída') };
+}
+export function checklistSummary(rows: Checklist[]) {
+  return { total: rows.length, approved: rows.filter(r => r.status === 'Aprovado').length, damaged: rows.filter(r => r.status === 'Com Avarias').length, rejected: rows.filter(r => r.status === 'Reprovado').length };
 }

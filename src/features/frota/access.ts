@@ -15,6 +15,9 @@ export function can(role: Role, action: Action, module: string) {
   return true;
 }
 export type SettingsSection = 'perfil' | 'alertas';
+export function profileDocumentFields(role: Role) {
+  return role === 'Motorista' ? ['cpf', 'cnh', 'category', 'validity'] as const : ['cpf'] as const;
+}
 export function settingsSections(role: Role): SettingsSection[] {
   if (role === 'Administrador') return ['perfil', 'alertas'];
   if (role === 'Gestor da Frota') return ['perfil'];

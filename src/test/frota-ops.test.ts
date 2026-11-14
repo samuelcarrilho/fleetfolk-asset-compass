@@ -43,6 +43,11 @@ describe('FROTATech operational rules', () => {
     expect(r).toMatchObject({ trip: { status: 'Em Rota', departureKm: 500, purpose: 'Coleta' }, checklist: { type: 'Saída', status: 'Aprovado' } });
   });
   const saida = { mode: 'saida' as const, id: 'a', driver: 'Pedro Santos', now: '2026-11-07T08:00', items: good, vehicle: 'v1', destination: 'Centro', departureKm: '500' };
+  it('accepts Rotina de Motorista and rejects the removed Outros purpose', () => {
+    expect(buildDriverSubmission({ ...saida, purpose: 'Rotina de Motorista' })).toMatchObject({ trip: { purpose: 'Rotina de Motorista' } });
+    const r = buildDriverSubmission({ ...saida, purpose: 'Outros' });
+    expect('errors' in r && r.errors['purpose']).toBeTruthy();
+  });
   it('driver departure requires a purpose', () => {
     const r = buildDriverSubmission(saida); expect('errors' in r && r.errors['purpose']).toBeTruthy();
   });
@@ -62,8 +67,16 @@ describe('FROTATech operational rules', () => {
   });
 });
 
-import { fineSummary, tripSummary, maintenanceSummary } from '@/features/frota/ops';
+import { fineSummary, tripSummary, maintenanceSummary, checklistSummary, initialChecklists } from '@/features/frota/ops';
 describe('resumos dos cartões', () => {
+  it('conta vistorias por status e recalcula após inclusão e exclusão', () => {
+    expect(checklistSummary(initialChecklists)).toEqual({ total: 9, approved: 5, damaged: 2, rejected: 2 });
+    const row = initialChecklists[0];
+    if (!row) throw new Error('Missing demo checklist');
+    expect(checklistSummary([...initialChecklists, { ...row, id: 'new', status: 'Com Avarias' }])).toEqual({ total: 10, approved: 5, damaged: 3, rejected: 2 });
+    expect(checklistSummary(initialChecklists.slice(1))).toEqual({ total: 8, approved: 4, damaged: 2, rejected: 2 });
+    expect(checklistSummary([])).toEqual({ total: 0, approved: 0, damaged: 0, rejected: 0 });
+  });
   it('soma multas pendentes, recorridas e valor', () => {
     const s = fineSummary([{ id: '1', date: '2026-01-01', vehicle: 'v0', driver: 'A', description: 'x', amount: 100, status: 'Pendente' }, { id: '2', date: '2026-01-01', vehicle: 'v0', driver: 'A', description: 'x', amount: 50, status: 'Recorrida' }]);
     expect(s).toEqual({ total: 2, pending: 1, amount: 150, appealed: 1 });

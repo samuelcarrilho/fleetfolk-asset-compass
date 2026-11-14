@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { homeFor, canAccess, can, settingsSections } from '@/features/frota/access';
+import { homeFor, canAccess, can, settingsSections, profileDocumentFields } from '@/features/frota/access';
 describe('controle de acesso', () => {
+  it('administrador vê CPF, sem dados de CNH', () => expect(profileDocumentFields('Administrador')).toEqual(['cpf']));
+  it('gestor vê CPF, sem dados de CNH', () => expect(profileDocumentFields('Gestor da Frota')).toEqual(['cpf']));
+  it('motorista vê CPF e todos os dados de CNH', () => expect(profileDocumentFields('Motorista')).toEqual(['cpf', 'cnh', 'category', 'validity']));
   it('motorista vai para o painel próprio e não acessa /usuarios nem /veiculos', () => {
     expect(homeFor('Motorista')).toBe('/checklist');
     expect(canAccess('Motorista', '/checklist')).toBe(true);

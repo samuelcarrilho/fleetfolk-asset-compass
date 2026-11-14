@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, CirclePlay, CircleStop, Check, X, Users, UserCheck, Route as RouteIcon, IdCard, CheckCircle, Gauge, Wrench, CalendarClock, Hammer } from 'lucide-react';
+import { Plus, CirclePlay, CircleStop, Check, X, Users, UserCheck, Route as RouteIcon, IdCard, CheckCircle, Gauge, Wrench, CalendarClock, Hammer, ClipboardCheck, TriangleAlert, XCircle } from 'lucide-react';
 import { Stat } from './listings';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { DriverChecklist, ConditionPicker } from './driver';
 const allGood = () => Object.fromEntries(checklistItems.map(k => [k, 'Bom'])) as Record<string, Condition>;
 import { userSchema, type User } from './data';
 import { DataTable, PageHeader, RecordDialog, useRefOptions, brDate, brl, type Field } from './crud';
-import { driverInfoSchema, cnhCategories, cnhAlert, tripSchema, closeTrip, maintenanceSchema, maintenanceStatuses, checklistSchema, checklistItems, checklistStatus, tripSummary, maintenanceSummary, type Condition, type DriverInfo, type Trip, type Maintenance, type Checklist } from './ops';
+import { driverInfoSchema, cnhCategories, cnhAlert, tripSchema, closeTrip, maintenanceSchema, maintenanceStatuses, checklistSchema, checklistItems, checklistStatus, checklistSummary, tripSummary, maintenanceSummary, type Condition, type DriverInfo, type Trip, type Maintenance, type Checklist } from './ops';
 
 const driverSchema = userSchema.omit({ profile: true }).merge(driverInfoSchema);
 type DriverRow = User & Partial<DriverInfo>;
@@ -97,8 +97,10 @@ export function ChecklistPage({ initialAction }: { initialAction?: string | unde
 function AdminChecklist({ initialAction }: { initialAction?: string | undefined }) {
   const fleet = useFleet(); const ref = useRefOptions(); const label = (id: string) => vehicleLabel(fleet.vehicles, id);
   const [details, setDetails] = useState<Checklist | null>(null); const [form, setForm] = useState(!!initialAction); const [items, setItems] = useState<Record<string, Condition>>(allGood);
+  const summary = checklistSummary(fleet.data.checklists);
   const fields: Field[] = [{ key: 'date', label: 'Data', type: 'date' }, { key: 'type', label: 'Tipo', options: ['Saída', 'Retorno'] }, { key: 'driver', label: 'Motorista', options: ref.drivers }, { key: 'vehicle', label: 'Veículo', options: ref.vehicles }, { key: 'notes', label: 'Observações', wide: true }];
   return <div className="page-content"><PageHeader title="Checklist" description="Inspeções diárias obrigatórias preenchidas pelos motoristas."><Button className="register-button" onClick={() => setForm(true)}><Plus />Checklist diário</Button></PageHeader>
+    <div className="stats-grid"><Stat icon={ClipboardCheck} label="Total de Vistorias" count={summary.total} /><Stat icon={CheckCircle} label="Aprovadas" tone="green" count={summary.approved} /><Stat icon={TriangleAlert} label="Com Avarias" tone="amber" count={summary.damaged} /><Stat icon={XCircle} label="Reprovadas" tone="red" count={summary.rejected} /></div>
     <DataTable<Checklist> rows={fleet.data.checklists} noun="checklists" searchPlaceholder="Pesquisar por motorista ou placa..." rowName={r => `checklist de ${r.driver}`} search={r => `${r.driver} ${label(r.vehicle)}`}
       filters={[{ label: 'Tipo', options: ['Saída', 'Retorno'], get: r => r.type }, { label: 'Status do Veículo', options: ['Aprovado', 'Com Avarias', 'Reprovado'], get: r => r.status }]}
       columns={[{ head: 'DATA', cell: r => brDate(r.date) }, { head: 'MOTORISTA', cell: r => r.driver }, { head: 'VEÍCULO', cell: r => label(r.vehicle) }, { head: 'TIPO', cell: r => r.type }, { head: 'STATUS DO VEÍCULO', cell: r => <Badge value={r.status} /> }, { head: 'DETALHES', cell: r => <Button variant="outline" size="sm" onClick={() => setDetails(r)}>Ver detalhes</Button> }]}
